@@ -427,33 +427,70 @@ def assess_content_quality(content: str, publication_type: str, analysis_type: s
 def assess_content_quality(content: str, publication_type: str, analysis_type: str) -> Dict[str, Any]:
     assessment = {}
     try:
-        # ... [earlier part of the function] ...
+        # 1. Readability Scores
+        assessment["readability"] = {
+            "flesch_kincaid_grade": textstat.flesch_kincaid_grade(content),
+            "flesch_reading_ease": textstat.flesch_reading_ease(content),
+            "smog_index": textstat.smog_index(content),
+        }
+
+        # 2. Word Count and Section Balance
+        try:
+            sections = re.split(r'\n##\s+', content)
+            section_word_counts = {section.split('\n')[0]: len(section.split()) for section in sections if section.strip()}
+            assessment["word_counts"] = section_word_counts
+            total_words = sum(section_word_counts.values())
+            assessment["total_words"] = total_words
+        except Exception as e:
+            logging.error(f"Error calculating word counts: {str(e)}")
+            assessment["word_counts"] = {}
+            assessment["total_words"] = len(content.split())  # Fallback to simple word count
+
+        # 3. Character Count (for Congress Abstract)
+        if publication_type == "Congress Abstract":
+            assessment["total_characters"] = len(content)
+
+        # 4. Keyword Density
+        words = re.findall(r'\w+', content.lower())
+        word_freq = Counter(words)
+        total_words = len(words)
+        keyword_density = {word: count/total_words for word, count in word_freq.most_common(10)}
+        assessment["keyword_density"] = keyword_density
+
+        # 5. Citation Check
+        citation_pattern = r'\(\w+\s+et\s+al\.,\s+\d{4}\)|\[\d+\]'
+        citations = re.findall(citation_pattern, content)
+        assessment["citation_count"] = len(citations)
 
         # 6. AI-powered Content Evaluation
-        max_input_chars = 16000 * 4
-        truncated_content = content[:max_input_chars]
-        
-        prompt = f"""
-        Evaluate the following {publication_type} content for a {analysis_type}. 
-        Provide a comprehensive assessment of its quality, coherence, and adherence to scientific writing standards.
-        Highlight any areas that need improvement and suggest specific enhancements.
+        try:
+            max_input_chars = 16000 * 4
+            truncated_content = content[:max_input_chars]
+            
+            prompt = f"""
+            Evaluate the following {publication_type} content for a {analysis_type}. 
+            Provide a comprehensive assessment of its quality, coherence, and adherence to scientific writing standards.
+            Highlight any areas that need improvement and suggest specific enhancements.
 
-        Content:
-        {truncated_content}
+            Content:
+            {truncated_content}
 
-        Evaluation:
-        """
-        
-        response = client.chat.completions.create(
-            model="gpt-4o-2024-08-06", 
-            messages=[
-                {"role": "system", "content": "You are a scientific writing expert."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=5000  # Limit the response length
-        )
-        
-        assessment["ai_evaluation"] = response.choices[0].message.content
+            Evaluation:
+            """
+            
+            response = client.chat.completions.create(
+                model="gpt-4o-2024-08-06",
+                messages=[
+                    {"role": "system", "content": "You are a scientific writing expert."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500
+            )
+            
+            assessment["ai_evaluation"] = response.choices[0].message.content
+        except Exception as e:
+            logging.error(f"Error in AI evaluation: {str(e)}")
+            assessment["ai_evaluation"] = "AI evaluation failed due to an error."
 
     except Exception as e:
         logging.exception("Error in assess_content_quality:")
