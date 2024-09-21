@@ -8,8 +8,6 @@ from functools import lru_cache
 from io import BytesIO
 import textstat  # Add this import for readability calculations
 from collections import Counter
-from openai import OpenAI
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
