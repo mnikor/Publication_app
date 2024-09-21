@@ -11,7 +11,6 @@ from collections import Counter
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import openai
 import PyPDF2
 import docx
 from docx import Document
