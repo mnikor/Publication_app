@@ -39,7 +39,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 # Initialize OpenAI with the API key from Streamlit secrets
-   client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Optional: Verify that the API key is loaded (for debugging purposes only; remove in production)
 # st.write(f"OpenAI API Key Loaded: {'Yes' if openai.api_key else 'No'}")
