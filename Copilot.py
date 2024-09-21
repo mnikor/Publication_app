@@ -424,16 +424,42 @@ def assess_content_quality(content: str, publication_type: str, analysis_type: s
 
         Evaluation:
         """
-        client = OpenAI()
+def assess_content_quality(content: str, publication_type: str, analysis_type: str) -> Dict[str, Any]:
+    assessment = {}
+    try:
+        # ... [earlier part of the function] ...
 
+        # 6. AI-powered Content Evaluation
+        max_input_chars = 16000 * 4
+        truncated_content = content[:max_input_chars]
+        
+        prompt = f"""
+        Evaluate the following {publication_type} content for a {analysis_type}. 
+        Provide a comprehensive assessment of its quality, coherence, and adherence to scientific writing standards.
+        Highlight any areas that need improvement and suggest specific enhancements.
+
+        Content:
+        {truncated_content}
+
+        Evaluation:
+        """
+        
         response = client.chat.completions.create(
-        model="gpt-4o-2024-08-06",
-        messages=[
-            {"role": "system", "content": "You are a scientific writing expert."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=16000
-    )
+            model="gpt-4o-2024-08-06", 
+            messages=[
+                {"role": "system", "content": "You are a scientific writing expert."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=5000  # Limit the response length
+        )
+        
+        assessment["ai_evaluation"] = response.choices[0].message.content
+
+    except Exception as e:
+        logging.exception("Error in assess_content_quality:")
+        assessment["error"] = str(e)
+
+    return assessment
     
     assessment["ai_evaluation"] = response.choices[0].message.content
 
