@@ -11,7 +11,7 @@ from collections import Counter
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import openai
+from openai import OpenAI
 import PyPDF2
 import docx
 from docx import Document
@@ -424,7 +424,7 @@ def assess_content_quality(content: str, publication_type: str, analysis_type: s
 
         Evaluation:
         """
-    
+    client = OpenAI()
     response = client.chat.completions.create(
         model="gpt-4o-2024-08-06",
         messages=[
