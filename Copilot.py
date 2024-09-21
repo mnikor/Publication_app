@@ -484,7 +484,7 @@ def assess_content_quality(content: str, publication_type: str, analysis_type: s
                     {"role": "system", "content": "You are a scientific writing expert."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=500
+                max_tokens=1000
             )
             
             assessment["ai_evaluation"] = response.choices[0].message.content
