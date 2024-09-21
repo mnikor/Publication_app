@@ -13,6 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import PyPDF2
 import docx
+from openai import OpenAI
 from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
