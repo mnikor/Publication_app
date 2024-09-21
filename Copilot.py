@@ -39,10 +39,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 # Initialize OpenAI with the API key from Streamlit secrets
-Import OS
-import openai
-
-# Initialize OpenAI with the API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Optional: Verify that the API key is loaded (for debugging purposes only; remove in production)
