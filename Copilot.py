@@ -40,7 +40,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Initialize OpenAI with the API key from Streamlit secrets
 
-client = OpenAI(api_key=st.secrets
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Optional: Verify that the API key is loaded (for debugging purposes only; remove in production)
 # st.write(f"OpenAI API Key Loaded: {'Yes' if openai.api_key else 'No'}")
@@ -389,7 +389,7 @@ def assess_content_quality(content: str, publication_type: str, analysis_type: s
     assessment["citation_count"] = len(citations)
 
     # 6. AI-powered Content Evaluation
-    client = OpenAI(api_key="")  # Replace with your actual API key
+    openai.api_key = st.secrets["OPENAI_API_KEY"]  # Replace with your actual API key
     
     # Truncate content to approximately 128000 tokens (assuming 4 characters per token)
     max_input_chars = 128000 * 4
