@@ -424,7 +424,7 @@ def assess_content_quality(content: str, publication_type: str, analysis_type: s
 
         Evaluation:
         """
-        client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+        client = OpenAI()
 
         response = client.chat.completions.create(
         model="gpt-4o-2024-08-06",
@@ -652,7 +652,7 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             {additional_instructions}
             """
 
-        client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+        client = OpenAI()
 
         response = client.chat.completions.create(
             model="gpt-4o-2024-08-06",
