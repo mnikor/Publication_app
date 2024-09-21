@@ -39,8 +39,13 @@ from reportlab.platypus import Table, TableStyle
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 
-# Initialize OpenAI client securely
-client = OpenAI(api_key="")  # Replace with your actual API key
+
+# Initialize OpenAI with the API key from Streamlit secrets
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+
+# Optional: Verify that the API key is loaded (for debugging purposes only; remove in production)
+# st.write(f"OpenAI API Key Loaded: {'Yes' if openai.api_key else 'No'}")
+  # Replace with your actual API key
 
 # Update the PUBLICATION_TYPES dictionary
 PUBLICATION_TYPES = {
