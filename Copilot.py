@@ -1,3 +1,4 @@
+pip install textstat openai streamlit pandas matplotlib PyPDF2 python-docx reportlab lifelines seaborn markdown2
 import os
 import re
 import json
