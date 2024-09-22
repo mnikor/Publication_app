@@ -1,6 +1,4 @@
 
-
-
 import os
 import re
 import json
@@ -844,36 +842,25 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    if chart_info.get("type") == "Text Description":
-        ax.text(0.5, 0.5, chart_info.get("description", "No description available"), 
-                wrap=True, horizontalalignment='center', verticalalignment='center')
-        ax.axis('off')
-        plt.title(chart_info.get("title", "Untitled Chart"))
-        return fig
-    
-    chart_type = chart_info.get('type', '').lower()
-    title = chart_info.get('title', '')
-    x_label = chart_info.get('x_label', '')
-    y_label = chart_info.get('y_label', '')
-    data_series = chart_info.get('data_series', [])
-    data = chart_info.get('data', [])
-
-    if not data:
-        ax.text(0.5, 0.5, "No data available for chart creation", 
-                wrap=True, horizontalalignment='center', verticalalignment='center')
-        ax.axis('off')
-        plt.title(title)
-        return fig
-
-    df = pd.DataFrame(data)
-    # Convert numeric columns to numbers, if possible
-    for col in df.columns:
-        if col != x_label and df[col].dtype == object:
-            df[col] = pd.to_numeric(df[col].astype(str).str.replace('%', ''), errors='coerce')
-
     try:
+        if not chart_info.get('data', []):
+            logging.warning(f"No data available to create the chart: {chart_info.get('title', 'Untitled')}")
+            return None
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        chart_type = chart_info.get('type', '').lower()
+        title = chart_info.get('title', '')
+        x_label = chart_info.get('x_label', '')
+        y_label = chart_info.get('y_label', '')
+        data_series = chart_info.get('data_series', [])
+        data = chart_info.get('data', [])
+
+        df = pd.DataFrame(data)
+        for col in df.columns:
+            if col != x_label and df[col].dtype == object:
+                df[col] = pd.to_numeric(df[col].astype(str).str.replace('%', ''), errors='coerce')
+
         if 'bar' in chart_type:
             df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
             for container in ax.containers:
@@ -899,13 +886,12 @@ def create_chart(chart_info: Dict[str, Any]):
         ax.set_ylabel(y_label)
         ax.set_title(title)
         plt.tight_layout()
-    except Exception as e:
-        logging.error(f"Error creating chart: {str(e)}")
-        ax.text(0.5, 0.5, f"Error creating chart: {str(e)}", 
-                wrap=True, horizontalalignment='center', verticalalignment='center')
-        ax.axis('off')
 
-    return fig
+        logging.info(f"Chart created successfully: {title}")
+        return fig
+    except Exception as e:
+        logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
+        return None
 
 def extract_text_from_pdf(file):
     pdf_reader = PyPDF2.PdfReader(file)
@@ -1331,16 +1317,19 @@ def main():
                             if charts:
                                 st.subheader("Visualizations:")
                                 for chart_info in charts:
+                                    st.write("Chart data:")
+                                    st.json(chart_info)  # Display the chart data for debugging
                                     if validate_chart_data(chart_info):
                                         try:
                                             fig = create_chart(chart_info)
-                                            st.pyplot(fig)  # Add this line to display the chart
-                                            plt.close(fig)  # Close the figure to free up memory
+                                            if fig is not None:
+                                                st.pyplot(fig)
+                                                plt.close(fig)  # Close the figure to free up memory
+                                            else:
+                                                st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}'. Please check the chart data.")
                                         except Exception as e:
-                                            st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
+                                            st.warning(f"Error occurred while creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
                                             logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
-                                            st.write("Chart data:")
-                                            st.json(chart_info)
                                     else:
                                         st.warning("Received invalid chart data. Unable to visualize this chart.")
                             else:
