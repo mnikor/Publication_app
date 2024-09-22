@@ -11,3 +11,4 @@ reportlab
 lifelines
 seaborn
 markdown2
+networkx
