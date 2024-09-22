@@ -849,7 +849,7 @@ def create_chart(chart_info: Dict[str, Any]):
                 wrap=True, horizontalalignment='center', verticalalignment='center')
         ax.axis('off')
         plt.title(chart_info.get("title", "Untitled Chart"))
-        return fig
+        return fig, ax
     
     chart_type = chart_info.get('type', '').lower()
     title = chart_info.get('title', '')
@@ -863,7 +863,47 @@ def create_chart(chart_info: Dict[str, Any]):
                 wrap=True, horizontalalignment='center', verticalalignment='center')
         ax.axis('off')
         plt.title(title)
-        return fig
+        return fig, ax
+
+    df = pd.DataFrame(data)
+    # Convert numeric columns to numbers, if possible
+    for col in df.columns:
+        if col != x_label and df[col].dtype == object:
+            df[col] = pd.to_numeric(df[col].astype(str).str.replace('%', ''), errors='coerce')
+
+    try:
+        if 'bar' in chart_type:
+            df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
+            for container in ax.containers:
+                ax.bar_label(container, label_type='edge')
+        elif 'line' in chart_type:
+            df.plot(kind='line', x=x_label, y=data_series, ax=ax, marker='o')
+            for line in ax.lines:
+                for x, y in zip(line.get_xdata(), line.get_ydata()):
+                    ax.annotate(f'{y:.2f}', (x, y), xytext=(0, 5), textcoords='offset points', ha='center')
+        elif 'pie' in chart_type:
+            if len(data_series) == 1:
+                df.plot(kind='pie', y=data_series[0], labels=df[x_label], ax=ax, autopct='%1.1f%%')
+            else:
+                raise ValueError("Pie chart requires exactly one data series.")
+        elif 'scatter' in chart_type:
+            df.plot(kind='scatter', x=data_series[0], y=data_series[1], ax=ax)
+        elif 'box' in chart_type:
+            df.boxplot(column=data_series, ax=ax)
+        else:
+            raise ValueError(f"Unsupported chart type: {chart_type}")
+
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        ax.set_title(title)
+        plt.tight_layout()
+    except Exception as e:
+        logging.error(f"Error creating chart: {str(e)}")
+        ax.text(0.5, 0.5, f"Error creating chart: {str(e)}", 
+                wrap=True, horizontalalignment='center', verticalalignment='center')
+        ax.axis('off')
+
+    return fig, ax
 
     df = pd.DataFrame(data)
     # Convert numeric columns to numbers, if possible
@@ -1326,22 +1366,23 @@ def main():
                             # Extract charts from the 'Visualizations' section
                             charts = extract_chart_info(result["content"])
 
-                            if charts:
-                                st.subheader("Visualizations:")
-                                for chart_info in charts:
-                                    if validate_chart_data(chart_info):
-                                        try:
-                                            fig = create_chart(chart_info)
-                                            st.pyplot(fig)
-                                        except Exception as e:
-                                            st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
-                                            logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
-                                            st.write("Chart data:")
-                                            st.json(chart_info)
-                                    else:
-                                        st.warning("Received invalid chart data. Unable to visualize this chart.")
-                            else:
-                                st.info("No charts were generated for this content.")
+    if charts:
+    st.subheader("Visualizations:")
+    for chart_info in charts:
+        if validate_chart_data(chart_info):
+            try:
+                fig, ax = create_chart(chart_info)
+                st.pyplot(fig)
+                plt.close(fig)  # Close the figure to free up memory
+            except Exception as e:
+                st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
+                logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
+                st.write("Chart data:")
+                st.json(chart_info)
+        else:
+            st.warning("Received invalid chart data. Unable to visualize this chart.")
+else:
+    st.info("No charts were generated for this content.")
 
                             # Assess content quality
                             quality_assessment = assess_content_quality(result["content"], publication_type, analysis_type)
