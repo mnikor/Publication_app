@@ -743,7 +743,7 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
     """
-    Extracts chart information from the '## Visualizations' section of the generated content.
+    Extracts chart information from the content.
 
     Parameters:
     - content (str): The full generated content containing chart JSON.
@@ -752,29 +752,17 @@ def extract_chart_info(content: str) -> List[Dict[str, Any]]:
     - List[Dict[str, Any]]: A list of chart information dictionaries.
     """
     charts = []
-    # Locate the '## Visualizations' section
-    visualizations_match = re.search(r'##\s+Visualizations\s*([\s\S]*)', content, re.IGNORECASE)
-    if visualizations_match:
-        visualizations_content = visualizations_match.group(1)
-        logging.debug(f"Found 'Visualizations' section:\n{visualizations_content}")
-        # Find all JSON blocks within the 'Visualizations' section
-        json_blocks = re.findall(r'```json\s*([\s\S]*?)```', visualizations_content, re.DOTALL | re.IGNORECASE)
-        logging.debug(f"Found {len(json_blocks)} JSON blocks in 'Visualizations' section.")
-        for idx, json_str in enumerate(json_blocks, 1):
-            try:
-                json_str = json_str.strip()
-                chart_info = json.loads(json_str)
-                # Validate required fields
-                if not validate_chart_data(chart_info):
-                    logging.warning(f"Chart {idx} is missing required fields or has invalid data.")
-                    continue
-                charts.append(chart_info)
-                logging.debug(f"Chart {idx} extracted successfully.")
-            except json.JSONDecodeError as e:
-                logging.error(f"JSON decoding error in chart {idx}: {e} in block: {json_str}")
-                continue
-    else:
-        logging.warning("No 'Visualizations' section found in the generated content.")
+    # Find all JSON blocks within the content
+    json_blocks = re.findall(r'\[[\s\S]*?\]', content)
+    for json_str in json_blocks:
+        try:
+            chart_list = json.loads(json_str)
+            for chart in chart_list:
+                if isinstance(chart, dict) and 'type' in chart and 'title' in chart:
+                    charts.append(chart)
+        except json.JSONDecodeError as e:
+            logging.error(f"JSON decoding error: {e} in block: {json_str}")
+            continue
     return charts
 
 def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
