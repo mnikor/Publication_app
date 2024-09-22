@@ -1354,90 +1354,86 @@ def main():
         help="Choose the format for the generated publication."
     )
 
-if st.button("Generate"):
-    if user_input.strip():
-        with st.spinner("Generating content..."):
-            try:
-                result = generate_document_cached(publication_type, analysis_type, user_input, additional_instructions)
-                if result:
-                    if result["content"].startswith("An error occurred"):
-                        st.error(result["content"])
-                    else:
-                        # Display the generated content
-                        st.subheader("Generated Content:")
-                        content_without_visualizations = re.sub(r'##\s+Visualizations\s*[\s\S]*', '', result["content"], flags=re.IGNORECASE)
-                        st.markdown(content_without_visualizations, unsafe_allow_html=True)
+def main():
+    st.title("Publication Copilot")
 
-                        # Extract charts from the 'Visualizations' section
-                        charts = extract_chart_info(result["content"])
-                        st.write(f"Number of charts extracted: {len(charts)}")  # Debug info
+    publication_type = st.selectbox("Select publication type", list(PUBLICATION_TYPES.keys()))
+    analysis_type = st.selectbox("Select analysis type", list(ANALYSIS_TYPES.keys()))
 
-                        if charts:
-                            st.subheader("Visualizations:")
-                            for i, chart_info in enumerate(charts):
-                                st.write(f"Processing chart {i+1}:")  # Debug info
-                                st.json(chart_info)  # Display chart data for debugging
-                                if validate_chart_data(chart_info):
-                                    try:
-                                        fig, ax = create_chart(chart_info)
-                                        st.pyplot(fig)
-                                        plt.close(fig)  # Close the figure to free up memory
-                                    except Exception as e:
-                                        st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
-                                        logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
-                                else:
-                                    st.warning(f"Invalid chart data for chart {i+1}. Unable to visualize this chart.")
-                        else:
-                            st.info("No charts were generated for this content.")
-
-                        # ... (quality assessment code remains the same)
-
-                        # Generate downloadable document
-                        with st.spinner("Generating downloadable document..."):
-                            try:
-                                selected_format = "word" if output_format == "Word Document" else "pdf"
-                                document = generate_word_document(result["content"], charts, output_format=selected_format)
-                                file_extension = "docx" if selected_format == "word" else "pdf"
-                                mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document" if selected_format == "word" else "application/pdf"
-                                
-                                st.write("Document generated successfully. Attempting to create download button...")  # Debug info
-                                
-                                download_button = st.download_button(
-                                    label=f"Download as {output_format}",
-                                    data=document,
-                                    file_name=f"{publication_type.lower().replace(' ', '_')}_{analysis_type.lower().replace(' ', '_')}.{file_extension}",
-                                    mime=mime_type
-                                )
-                                
-                                if download_button:
-                                    st.success("Download button created successfully!")
-                                else:
-                                    st.warning("Download button creation failed.")
-                                
-                            except Exception as e:
-                                st.error(f"Error generating downloadable document: {str(e)}")
-                                logging.exception("Error in document generation:")
-
-                        # Optionally, allow downloading raw content
-                        raw_download_button = st.download_button(
-                            label="Download Raw Content as Text",
-                            data=result["content"],
-                            file_name=f"{publication_type.lower().replace(' ', '_')}_{analysis_type.lower().replace(' ', '_')}.txt",
-                            mime="text/plain"
-                        )
-                        
-                        if raw_download_button:
-                            st.success("Raw content download button created successfully!")
-                        else:
-                            st.warning("Raw content download button creation failed.")
-
-                else:
-                    st.warning("No content was generated. Please try again.")
-            except Exception as e:
-                st.error(f"An unexpected error occurred: {str(e)}")
-                logging.exception("An unexpected error occurred in the main application:")
+    # Display recommendations based on analysis type
+    recommendations = get_source_document_recommendations(analysis_type)
+    if recommendations:
+        st.subheader("Recommended Source Documents:")
+        for doc in recommendations:
+            st.write(f"- {doc}")
+    
+    uploaded_files = st.file_uploader(
+        "Upload one or more PDF, Word, TXT, XLS, or CSV documents",
+        type=["pdf", "docx", "txt", "xls", "xlsx", "csv"],
+        accept_multiple_files=True
+    )
+    
+    if uploaded_files:
+        user_input = combine_uploaded_files(uploaded_files)
+        st.success(f"{len(uploaded_files)} file(s) uploaded and text extracted successfully!")
     else:
-        st.warning("Please enter some information or upload at least one file before generating.")
+        user_input = st.text_area("Or enter your clinical study information:", height=300)
+
+    additional_instructions = st.text_area(
+        "Additional instructions (optional):",
+        height=100,
+        help="You can provide specific instructions or preferences here. For example:\n"
+             "- Emphasize certain aspects of the study\n"
+             "- Request specific statistical analyses\n"
+             "- Ask for a particular writing style or tone\n"
+             "- Specify any content that should be excluded\n"
+             "- Request focus on certain subgroups or outcomes",
+        placeholder="E.g., 'Please emphasize the safety profile of the drug.' or 'Focus on the subgroup analysis for patients over 65.'"
+    )
+
+    # Select output format
+    output_format = st.selectbox(
+        "Select output format",
+        ["Word Document", "PDF"],
+        help="Choose the format for the generated publication."
+    )
+
+    if st.button("Generate"):
+        if user_input.strip():
+            with st.spinner("Generating content..."):
+                try:
+                    result = generate_document_cached(publication_type, analysis_type, user_input, additional_instructions)
+                    if result:
+                        if result["content"].startswith("An error occurred"):
+                            st.error(result["content"])
+                        else:
+                            # Display the generated content
+                            st.subheader("Generated Content:")
+                            content_without_visualizations = re.sub(r'##\s+Visualizations\s*[\s\S]*', '', result["content"], flags=re.IGNORECASE)
+                            st.markdown(content_without_visualizations, unsafe_allow_html=True)
+
+                            # Extract charts from the 'Visualizations' section
+                            charts = extract_chart_info(result["content"])
+                            st.write(f"Number of charts extracted: {len(charts)}")  # Debug info
+
+                            if charts:
+                                st.subheader("Visualizations:")
+                                for i, chart_info in enumerate(charts):
+                                    st.write(f"Processing chart {i+1}:")  # Debug info
+                                    st.json(chart_info)  # Display chart data for debugging
+                                    if validate_chart_data(chart_info):
+                                        try:
+                                            fig, ax = create_chart(chart_info)
+                                            st.pyplot(fig)
+                                            plt.close(fig)  # Close the figure to free up memory
+                                        except Exception as e:
+                                            st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
+                                            logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
+                                    else:
+                                        st.warning(f"Invalid chart data for chart {i+1}. Unable to visualize this chart.")
+                            else:
+                                st.info("No charts were generated for this content.")
+
                             # Assess content quality
                             quality_assessment = assess_content_quality(result["content"], publication_type, analysis_type)
 
@@ -1504,22 +1500,38 @@ if st.button("Generate"):
                                     document = generate_word_document(result["content"], charts, output_format=selected_format)
                                     file_extension = "docx" if selected_format == "word" else "pdf"
                                     mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document" if selected_format == "word" else "application/pdf"
-                                    st.download_button(
+                                    
+                                    st.write("Document generated successfully. Attempting to create download button...")  # Debug info
+                                    
+                                    download_button = st.download_button(
                                         label=f"Download as {output_format}",
                                         data=document,
                                         file_name=f"{publication_type.lower().replace(' ', '_')}_{analysis_type.lower().replace(' ', '_')}.{file_extension}",
                                         mime=mime_type
                                     )
+                                    
+                                    if download_button:
+                                        st.success("Download button created successfully!")
+                                    else:
+                                        st.warning("Download button creation failed.")
+                                    
                                 except Exception as e:
                                     st.error(f"Error generating downloadable document: {str(e)}")
-                            
+                                    logging.exception("Error in document generation:")
+
                             # Optionally, allow downloading raw content
-                            st.download_button(
+                            raw_download_button = st.download_button(
                                 label="Download Raw Content as Text",
                                 data=result["content"],
                                 file_name=f"{publication_type.lower().replace(' ', '_')}_{analysis_type.lower().replace(' ', '_')}.txt",
                                 mime="text/plain"
                             )
+                            
+                            if raw_download_button:
+                                st.success("Raw content download button created successfully!")
+                            else:
+                                st.warning("Raw content download button creation failed.")
+
                     else:
                         st.warning("No content was generated. Please try again.")
                 except Exception as e:
