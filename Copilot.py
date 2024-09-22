@@ -682,31 +682,89 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
                - Background: Explain the scientific context and rationale
                - Objectives: State specific objectives and hypotheses
 
-            4. Methods:
-               - Trial Design: Description, important changes to methods after trial commencement
-               - Participants: Eligibility criteria, settings, locations of data collection
-               - Interventions: Precise details of interventions in each group, how and when administered
-               - Outcomes: Completely defined pre-specified primary and secondary outcome measures, including how and when assessed
-               - Sample Size: How it was determined
-               - Randomization: 
-                 • Sequence generation: Method used to generate the random allocation sequence
-                 • Allocation concealment: Method used to implement the random allocation sequence
-                 • Implementation: Who generated the allocation sequence, enrolled participants, and assigned them to interventions
-               - Blinding: Who was blinded after assignment to interventions and how
-               - Statistical Methods: 
-                 • Statistical methods used to compare groups for primary and secondary outcomes
-                 • Methods for additional analyses, such as subgroup analyses and adjusted analyses
-               - Ethical Considerations: Mention of ethical approval, informed consent, and adherence to guidelines
+ 4. Methods:
+   - Trial Design:
+     • Describe the type of trial (e.g., parallel group, crossover, factorial) and its framework (e.g., superiority, equivalence, non-inferiority)
+     • Specify the allocation ratio
+     • Detail any important changes to methods after trial commencement (e.g., eligibility criteria), with reasons
+   - Participants:
+     • Provide detailed eligibility criteria for participants, including age range, gender, diagnosis criteria, and any specific inclusion/exclusion criteria
+     • Describe the settings and locations where the data were collected (e.g., number and type of centers)
+     • Specify the duration of the study, including recruitment period and follow-up
+   - Interventions:
+     • For each group, provide precise details of the interventions:
+       - The drug name (generic and trade), manufacturer, dose, route of administration, and regimen
+       - Any washout periods and run-in phases
+       - Procedures for monitoring participant compliance
+     • Describe any concomitant treatments allowed or prohibited
+   - Outcomes:
+     • Clearly define all primary and secondary outcome measures, including how and when they were assessed
+     • Specify any changes to trial outcomes after the trial commenced, with reasons
+     • For each outcome measure, provide details on its validity and reliability in the study population
+   - Sample Size:
+     • Explain how sample size was determined
+     • Provide details of any interim analyses and stopping guidelines, if applicable
+   - Randomization:
+     • Sequence Generation: Describe the method used to generate the random allocation sequence (e.g., computer-generated random numbers)
+     • Allocation Concealment: Detail the mechanism used to implement the random allocation sequence (e.g., sequentially numbered containers), describing any steps taken to conceal the sequence until interventions were assigned
+     • Implementation: Specify who generated the random allocation sequence, who enrolled participants, and who assigned participants to interventions
+   - Blinding:
+     • Describe who was blinded after assignment to interventions (e.g., participants, care providers, outcome assessors)
+     • If relevant, describe the similarity of interventions (e.g., appearance, taste, smell)
+     • Provide details on how the success of blinding was evaluated
+   - Statistical Methods:
+     • Describe statistical methods used to compare groups for primary and secondary outcomes, including:
+       - Handling of missing data (e.g., complete-case analysis, multiple imputation)
+       - Any adjustments for multiple comparisons
+       - Analysis population (e.g., intention-to-treat, per-protocol)
+     • Explain methods for additional analyses, such as subgroup analyses, adjusted analyses, and sensitivity analyses
+     • Specify the statistical software used
+   - Ethical Considerations:
+     • Provide details of ethical approval, including the name of the ethics committee(s) and the approval number(s)
+     • Describe the process for obtaining informed consent from participants
+     • Mention adherence to specific ethical guidelines (e.g., Declaration of Helsinki)
+     • Detail any data monitoring and safety procedures
 
-            5. Results:
-               - Participant Flow: Flow of participants through each stage (a diagram is strongly recommended)
-               - Recruitment: Dates defining the periods of recruitment and follow-up
-               - Baseline Data: Baseline demographic and clinical characteristics of each group
-               - Numbers Analyzed: Number of participants in each group included in each analysis and whether the analysis was by original assigned groups
-               - Outcomes and Estimation: For each primary and secondary outcome, results for each group, and the estimated effect size and its precision
-               - Ancillary Analyses: Results of any other analyses performed
-               - Harms: All important harms or unintended effects in each group
+5. Results:
+   - Participant Flow:
+     • Provide a detailed flow diagram of participant progress through the study, including:
+       - Number of participants screened, eligible, consented, randomized, received intended treatment, and analyzed for the primary outcome
+       - Reasons for non-participation at each stage
+     • For each group, describe losses and exclusions after randomization, with reasons
+   - Recruitment:
+     • State the specific dates defining the periods of recruitment and follow-up
+     • Explain why the trial ended or was stopped, if applicable
+   - Baseline Data:
+     • Present a detailed table showing baseline demographic and clinical characteristics for each group
+     • Include all important prognostic variables and potential confounding factors
+   - Numbers Analyzed:
+     • For each group, report the number of participants included in each analysis
+     • Specify whether the analysis was by original assigned groups
+     • Provide reasons for any protocol deviations
+   - Outcomes and Estimation:
+     • For each primary and secondary outcome:
+       - Present results for each group
+       - Provide the estimated effect size and its precision (e.g., 95% confidence interval)
+       - For binary outcomes, present both absolute and relative effect sizes
+     • Include results of any other analyses performed, including subgroup analyses and adjusted analyses, distinguishing pre-specified from exploratory analyses
+     • Present results in a clear, organized manner, using tables and figures where appropriate
+   - Ancillary Analyses:
+     • Report the results of any other analyses performed, including:
+       - Subgroup analyses
+       - Adjusted analyses
+       - Sensitivity analyses
+     • Clearly distinguish pre-specified from exploratory analyses
+   - Harms:
+     • Provide a comprehensive summary of all important harms or unintended effects in each group
+     • Include:
+       - Absolute risks of important adverse events for each group
+       - Serious adverse events
+       - Withdrawals due to adverse events
+       - Most common adverse events (e.g., those occurring in >5% of participants)
+     • Describe any differences in adverse events between treatment groups
+     • Present data on the timing, severity, and duration of adverse events, if available
 
+Ensure that each of these sections is thoroughly addressed, providing specific details and data from the study wherever possible. Use tables, figures, and statistical analyses as appropriate to present the information clearly and comprehensively.
             6. Discussion:
                - Limitations: Trial limitations, addressing sources of potential bias, imprecision, and, if relevant, multiplicity of analyses
                - Generalizability: External validity of the trial findings
