@@ -1,4 +1,5 @@
 
+
 import os
 import re
 import json
@@ -842,55 +843,77 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
+    """
+    Create a chart if numeric data is available, otherwise skip.
+    """
+    title = chart_info.get('title', 'Untitled Chart')
+    description = chart_info.get('description', '')
+
     try:
-        if not chart_info.get('data', []):
-            logging.warning(f"No data available to create the chart: {chart_info.get('title', 'Untitled')}")
-            return None
-
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-        chart_type = chart_info.get('type', '').lower()
-        title = chart_info.get('title', '')
-        x_label = chart_info.get('x_label', '')
-        y_label = chart_info.get('y_label', '')
-        data_series = chart_info.get('data_series', [])
-        data = chart_info.get('data', [])
-
-        df = pd.DataFrame(data)
-        for col in df.columns:
-            if col != x_label and df[col].dtype == object:
-                df[col] = pd.to_numeric(df[col].astype(str).str.replace('%', ''), errors='coerce')
-
-        if 'bar' in chart_type:
-            df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
-            for container in ax.containers:
-                ax.bar_label(container, label_type='edge')
-        elif 'line' in chart_type:
-            df.plot(kind='line', x=x_label, y=data_series, ax=ax, marker='o')
-            for line in ax.lines:
-                for x, y in zip(line.get_xdata(), line.get_ydata()):
-                    ax.annotate(f'{y:.2f}', (x, y), xytext=(0, 5), textcoords='offset points', ha='center')
-        elif 'pie' in chart_type:
-            if len(data_series) == 1:
-                df.plot(kind='pie', y=data_series[0], labels=df[x_label], ax=ax, autopct='%1.1f%%')
+        # Check if this is a text description and try to extract numeric data
+        if chart_info.get("type") == "Text Description":
+            # Extract numeric data from the description
+            extracted_data = extract_numeric_from_description(description)
+            
+            if extracted_data is not None:
+                # Create a bar chart as an example
+                fig, ax = plt.subplots(figsize=(8, 6))
+                extracted_data.plot(kind='bar', x='Week', y='Patients', ax=ax)
+                ax.set_title(title)
+                plt.tight_layout()
+                return fig
             else:
-                raise ValueError("Pie chart requires exactly one data series.")
-        elif 'scatter' in chart_type:
-            df.plot(kind='scatter', x=data_series[0], y=data_series[1], ax=ax)
-        elif 'box' in chart_type:
-            df.boxplot(column=data_series, ax=ax)
+                logging.warning(f"No numeric data found for chart '{title}'")
+                return None
         else:
-            raise ValueError(f"Unsupported chart type: {chart_type}")
+            # Existing logic for non-text charts
+            if not chart_info.get('data', []):
+                logging.warning(f"No data available to create the chart: {title}")
+                return None
 
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
-        ax.set_title(title)
-        plt.tight_layout()
+            df = pd.DataFrame(chart_info.get('data', []))
 
-        logging.info(f"Chart created successfully: {title}")
-        return fig
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+            chart_type = chart_info.get('type', '').lower()
+            x_label = chart_info.get('x_label', '') or df.columns[0]
+            y_label = chart_info.get('y_label', '') or df.columns[1]
+            data_series = chart_info.get('data_series', []) or df.columns[1:]
+
+            for col in df.columns:
+                if col != x_label and df[col].dtype == object:
+                    df[col] = pd.to_numeric(df[col].astype(str).str.replace('%', ''), errors='coerce')
+
+            if 'bar' in chart_type:
+                df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
+                for container in ax.containers:
+                    ax.bar_label(container, label_type='edge')
+            elif 'line' in chart_type:
+                df.plot(kind='line', x=x_label, y=data_series, ax=ax, marker='o')
+                for line in ax.lines:
+                    for x, y in zip(line.get_xdata(), line.get_ydata()):
+                        ax.annotate(f'{y:.2f}', (x, y), xytext=(0, 5), textcoords='offset points', ha='center')
+            elif 'pie' in chart_type:
+                if len(data_series) == 1:
+                    df.plot(kind='pie', y=data_series[0], labels=df[x_label], ax=ax, autopct='%1.1f%%')
+                else:
+                    raise ValueError("Pie chart requires exactly one data series.")
+            elif 'scatter' in chart_type:
+                df.plot(kind='scatter', x=data_series[0], y=data_series[1], ax=ax)
+            elif 'box' in chart_type:
+                df.boxplot(column=data_series, ax=ax)
+            else:
+                raise ValueError(f"Unsupported chart type: {chart_type}")
+
+            ax.set_xlabel(x_label)
+            ax.set_ylabel(y_label)
+            ax.set_title(title)
+            plt.tight_layout()
+
+            return fig
+
     except Exception as e:
-        logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
+        logging.error(f"Error creating chart '{title}': {str(e)}")
         return None
 
 def extract_text_from_pdf(file):
@@ -1045,16 +1068,20 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
                 try:
                     # Create chart using Matplotlib
                     fig = create_chart(chart)
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
-                        fig.savefig(tmpfile.name, format='png', bbox_inches='tight')
-                        doc.add_picture(tmpfile.name, width=Inches(6))
-                    os.unlink(tmpfile.name)
-                    plt.close(fig)  # Close the figure to free up memory
-                    
-                    # Add chart title and description
-                    doc.add_paragraph(chart.get("title", "Untitled Chart"), style='Heading3')
-                    if chart.get("type") == "Text Description":
-                        doc.add_paragraph(chart.get("description", "No description available"))
+                    if fig is not None:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+                            fig.savefig(tmpfile.name, format='png', bbox_inches='tight')
+                            doc.add_picture(tmpfile.name, width=Inches(6))
+                        os.unlink(tmpfile.name)
+                        plt.close(fig)  # Close the figure to free up memory
+                        
+                        # Add chart title and description
+                        doc.add_paragraph(chart.get("title", "Untitled Chart"), style='Heading3')
+                        if chart.get("type") == "Text Description":
+                            doc.add_paragraph(chart.get("description", "No description available"))
+                    else:
+                        doc.add_paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}")
+                        doc.add_paragraph(f"Error details: {str(e)}")
                 except Exception as e:
                     logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
                     doc.add_paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}")
@@ -1136,39 +1163,43 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
                         elements.append(Spacer(1, 6))
                     else:
                         fig = create_chart(chart)
-                        img_buffer = BytesIO()
-                        fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
-                        img_buffer.seek(0)
-                        img = Image(img_buffer)
-                        
-                        # Calculate aspect ratio and adjust image size
-                        fig_width, fig_height = fig.get_size_inches()
-                        aspect_ratio = fig_height / fig_width
-                        
-                        img_width = 6 * inch  # Set a maximum width
-                        img_height = img_width * aspect_ratio
-                        
-                        # If the height is too large, adjust both width and height
-                        if img_height > 8 * inch:
-                            img_height = 8 * inch
-                            img_width = img_height / aspect_ratio
-                        
-                        img.drawHeight = img_height
-                        img.drawWidth = img_width
-                        img.hAlign = 'CENTER'
-                        
-                        # Add more space before the chart
-                        elements.append(Spacer(1, 24))
-                        elements.append(img)
-                        # Add more space after the chart
-                        elements.append(Spacer(1, 24))
-                        
-                        # Add chart title
-                        if 'title' in chart:
-                            elements.append(Paragraph(chart['title'], styles['Heading4']))
-                            elements.append(Spacer(1, 12))
-                        
-                        plt.close(fig)
+                        if fig is not None:
+                            img_buffer = BytesIO()
+                            fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
+                            img_buffer.seek(0)
+                            img = Image(img_buffer)
+                            
+                            # Calculate aspect ratio and adjust image size
+                            fig_width, fig_height = fig.get_size_inches()
+                            aspect_ratio = fig_height / fig_width
+                            
+                            img_width = 6 * inch  # Set a maximum width
+                            img_height = img_width * aspect_ratio
+                            
+                            # If the height is too large, adjust both width and height
+                            if img_height > 8 * inch:
+                                img_height = 8 * inch
+                                img_width = img_height / aspect_ratio
+                            
+                            img.drawHeight = img_height
+                            img.drawWidth = img_width
+                            img.hAlign = 'CENTER'
+                            
+                            # Add more space before the chart
+                            elements.append(Spacer(1, 24))
+                            elements.append(img)
+                            # Add more space after the chart
+                            elements.append(Spacer(1, 24))
+                            
+                            # Add chart title
+                            if 'title' in chart:
+                                elements.append(Paragraph(chart['title'], styles['Heading4']))
+                                elements.append(Spacer(1, 12))
+                            
+                            plt.close(fig)
+                        else:
+                            elements.append(Paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}", styles['Justify']))
+                            elements.append(Spacer(1, 6))
                 except Exception as e:
                     logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
                     elements.append(Paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}", styles['Justify']))
@@ -1320,16 +1351,12 @@ def main():
                                     st.write("Chart data:")
                                     st.json(chart_info)  # Display the chart data for debugging
                                     if validate_chart_data(chart_info):
-                                        try:
-                                            fig = create_chart(chart_info)
-                                            if fig is not None:
-                                                st.pyplot(fig)
-                                                plt.close(fig)  # Close the figure to free up memory
-                                            else:
-                                                st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}'. Please check the chart data.")
-                                        except Exception as e:
-                                            st.warning(f"Error occurred while creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
-                                            logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
+                                        fig = create_chart(chart_info)
+                                        if fig is not None:
+                                            st.pyplot(fig)
+                                            plt.close(fig)  # Close the figure to free up memory
+                                        else:
+                                            st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}'. Please check the chart data.")
                                     else:
                                         st.warning("Received invalid chart data. Unable to visualize this chart.")
                             else:
