@@ -358,9 +358,6 @@ def get_section_requirements(publication_type: str) -> str:
              - Adhere to the target journal's formatting and style guidelines.
              - Use formal academic language and define all technical terms.
         """
-    else:
-        return ""
-      
     elif publication_type == "Plain Language Summary":
         return """
            - Title: Simple, clear, and reflective of the main message. (10-15 words)
