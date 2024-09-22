@@ -769,39 +769,31 @@ def get_section_guidelines(section: str, analysis_type: str) -> str:
     return guidelines.get(section, "Provide relevant content for this section.")
 
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
-    """
-    Extracts chart information from the '## Visualizations' section of the generated content.
-
-    Parameters:
-    - content (str): The full generated content containing chart JSON.
-
-    Returns:
-    - List[Dict[str, Any]]: A list of chart information dictionaries.
-    """
     charts = []
-    # Locate the '## Visualizations' section
-    visualizations_match = re.search(r'##\s+Visualizations\s*([\s\S]*)', content, re.IGNORECASE)
-    if visualizations_match:
-        visualizations_content = visualizations_match.group(1)
-        logging.debug(f"Found 'Visualizations' section:\n{visualizations_content}")
-        # Find all JSON blocks within the 'Visualizations' section
-        json_blocks = re.findall(r'```json\s*([\s\S]*?)```', visualizations_content, re.DOTALL | re.IGNORECASE)
-        logging.debug(f"Found {len(json_blocks)} JSON blocks in 'Visualizations' section.")
-        for idx, json_str in enumerate(json_blocks, 1):
-            try:
-                json_str = json_str.strip()
-                chart_info = json.loads(json_str)
-                # Validate required fields
-                if not validate_chart_data(chart_info):
-                    logging.warning(f"Chart {idx} is missing required fields or has invalid data.")
-                    continue
+    # Look for JSON-formatted chart data
+    json_blocks = re.findall(r'```json\s*([\s\S]*?)```', content, re.DOTALL | re.IGNORECASE)
+    
+    for json_str in json_blocks:
+        try:
+            chart_info = json.loads(json_str.strip())
+            if validate_chart_data(chart_info):
                 charts.append(chart_info)
-                logging.debug(f"Chart {idx} extracted successfully.")
-            except json.JSONDecodeError as e:
-                logging.error(f"JSON decoding error in chart {idx}: {e} in block: {json_str}")
-                continue
-    else:
-        logging.warning("No 'Visualizations' section found in the generated content.")
+        except json.JSONDecodeError:
+            logging.error(f"JSON decoding error in chart: {json_str}")
+
+    # If no JSON data found, look for text descriptions of charts
+    if not charts:
+        chart_descriptions = re.findall(r'(Figure \d+:.*?)(?=Figure \d+:|$)', content, re.DOTALL)
+        for desc in chart_descriptions:
+            lines = desc.strip().split('\n')
+            title = lines[0].strip()
+            description = ' '.join(lines[1:]).strip()
+            charts.append({
+                "type": "Text Description",
+                "title": title,
+                "description": description
+            })
+
     return charts
 
 def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
@@ -860,15 +852,14 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
-    """
-    Creates a Matplotlib figure based on the provided chart information.
-
-    Parameters:
-    - chart_info (Dict[str, Any]): Dictionary containing chart specifications.
-
-    Returns:
-    - plt.Figure: The created Matplotlib figure.
-    """
+    if chart_info.get("type") == "Text Description":
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.text(0.5, 0.5, chart_info["description"], wrap=True, horizontalalignment='center', verticalalignment='center')
+        ax.axis('off')
+        plt.title(chart_info["title"])
+        return fig
+    
+    # Existing code for creating charts from JSON data
     chart_type = chart_info.get('type', '').lower()
     title = chart_info.get('title', '')
     x_label = chart_info.get('x_label', '')
@@ -1105,10 +1096,8 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
         doc = Document()
         # Remove the '## Visualizations' section from content
         content_without_visualizations = re.sub(r'##\s+Visualizations\s*[\s\S]*', '', content, flags=re.IGNORECASE)
-        # Remove image tags from content
-        content_without_images = re.sub(r'<img[^>]*>', '', content_without_visualizations)
         # Convert Markdown to HTML
-        html_content = markdown2.markdown(content_without_images)
+        html_content = markdown2.markdown(content_without_visualizations)
         # Parse HTML content and add to Word document
         for line in html_content.split('\n'):
             if line.startswith("<h2>"):
@@ -1156,6 +1145,11 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
                         doc.add_picture(tmpfile.name, width=Inches(6))
                     os.unlink(tmpfile.name)
                     plt.close(fig)  # Close the figure to free up memory
+                    
+                    # Add chart title and description
+                    if chart.get("type") == "Text Description":
+                        doc.add_paragraph(chart["title"], style='Heading3')
+                        doc.add_paragraph(chart["description"])
                 except Exception as e:
                     logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
                     doc.add_paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}")
@@ -1231,40 +1225,44 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
             elements.append(Spacer(1, 12))
             for chart in charts:
                 try:
-                    fig = create_chart(chart)
-                    img_buffer = BytesIO()
-                    fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
-                    img_buffer.seek(0)
-                    img = Image(img_buffer)
-                    
-                    # Calculate aspect ratio and adjust image size
-                    fig_width, fig_height = fig.get_size_inches()
-                    aspect_ratio = fig_height / fig_width
-                    
-                    img_width = 6 * inch  # Set a maximum width
-                    img_height = img_width * aspect_ratio
-                    
-                    # If the height is too large, adjust both width and height
-                    if img_height > 8 * inch:
-                        img_height = 8 * inch
-                        img_width = img_height / aspect_ratio
-                    
-                    img.drawHeight = img_height
-                    img.drawWidth = img_width
-                    img.hAlign = 'CENTER'
-                    
-                    # Add more space before the chart
-                    elements.append(Spacer(1, 24))
-                    elements.append(img)
-                    # Add more space after the chart
-                    elements.append(Spacer(1, 24))
-                    
-                    # Add chart title
-                    if 'title' in chart:
-                        elements.append(Paragraph(chart['title'], styles['Heading4']))
-                        elements.append(Spacer(1, 12))
-                    
-                    plt.close(fig)
+                    if chart.get('type') == 'Text Description':
+                        elements.append(Paragraph(f"{chart['title']}\n{chart['description']}", styles['Justify']))
+                        elements.append(Spacer(1, 6))
+                    else:
+                        fig = create_chart(chart)
+                        img_buffer = BytesIO()
+                        fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
+                        img_buffer.seek(0)
+                        img = Image(img_buffer)
+                        
+                        # Calculate aspect ratio and adjust image size
+                        fig_width, fig_height = fig.get_size_inches()
+                        aspect_ratio = fig_height / fig_width
+                        
+                        img_width = 6 * inch  # Set a maximum width
+                        img_height = img_width * aspect_ratio
+                        
+                        # If the height is too large, adjust both width and height
+                        if img_height > 8 * inch:
+                            img_height = 8 * inch
+                            img_width = img_height / aspect_ratio
+                        
+                        img.drawHeight = img_height
+                        img.drawWidth = img_width
+                        img.hAlign = 'CENTER'
+                        
+                        # Add more space before the chart
+                        elements.append(Spacer(1, 24))
+                        elements.append(img)
+                        # Add more space after the chart
+                        elements.append(Spacer(1, 24))
+                        
+                        # Add chart title
+                        if 'title' in chart:
+                            elements.append(Paragraph(chart['title'], styles['Heading4']))
+                            elements.append(Spacer(1, 12))
+                        
+                        plt.close(fig)
                 except Exception as e:
                     logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
                     elements.append(Paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}", styles['Justify']))
