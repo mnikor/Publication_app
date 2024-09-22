@@ -33,6 +33,7 @@ from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
+import networkx as nx
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -743,25 +744,13 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
     charts = []
-    
-    # Look for the Visualizations section
-    visualizations_match = re.search(r'##\s+Visualizations\s*([\s\S]*)', content, re.IGNORECASE)
-    if visualizations_match:
-        visualizations_content = visualizations_match.group(1)
-        json_blocks = re.findall(r'```json\s*([\s\S]*?)```', visualizations_content, re.DOTALL | re.IGNORECASE)
-    else:
-        # If no Visualizations section, look for JSON blocks in the entire content
-        json_blocks = re.findall(r'JSON:\s*(\{[\s\S]*?\})', content)
+    json_blocks = re.findall(r'JSON:\s*(\{[\s\S]*?\})', content, re.DOTALL)
     
     for json_str in json_blocks:
         try:
             chart_info = json.loads(json_str)
             if isinstance(chart_info, dict) and 'type' in chart_info:
-                if 'data' in chart_info:
-                    charts.append(chart_info)
-                else:
-                    # For backwards compatibility with the old format
-                    charts.append({"type": chart_info["type"], "data": chart_info})
+                charts.append(chart_info)
         except json.JSONDecodeError as e:
             logging.error(f"JSON decoding error: {e} in block: {json_str}")
     
@@ -824,19 +813,25 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
 
 def create_chart(chart_info: Dict[str, Any]):
     chart_type = chart_info.get('type', '').lower()
-    data = chart_info.get('data', chart_info)  # Use 'data' if present, otherwise use the whole chart_info
+    title = chart_info.get('title', '')
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
     try:
         if chart_type == 'flowchart':
-            nodes = data.get('nodes', [])
-            for i, node in enumerate(nodes):
-                ax.text(0.5, 1 - (i+1)/(len(nodes)+1), node['label'], ha='center', va='center', bbox=dict(facecolor='white', edgecolor='black'))
-            ax.axis('off')
+            nodes = chart_info.get('nodes', [])
+            edges = chart_info.get('edges', [])
+            G = nx.DiGraph()
+            for node in nodes:
+                G.add_node(node['id'], label=node['label'])
+            for edge in edges:
+                G.add_edge(edge['from'], edge['to'])
+            pos = nx.spring_layout(G)
+            nx.draw(G, pos, ax=ax, with_labels=False, node_color='lightblue', node_size=3000, arrows=True)
+            nx.draw_networkx_labels(G, pos, {node['id']: node['label'] for node in nodes}, ax=ax)
         elif chart_type == 'table':
-            columns = data.get('columns', [])
-            rows = data.get('rows', [])
+            columns = chart_info.get('columns', [])
+            rows = chart_info.get('rows', [])
             cell_text = [[row.get(col, '') for col in columns] for row in rows]
             ax.axis('tight')
             ax.axis('off')
@@ -844,18 +839,10 @@ def create_chart(chart_info: Dict[str, Any]):
             table.auto_set_font_size(False)
             table.set_fontsize(9)
             table.scale(1, 1.5)
-        elif chart_type == 'line_chart':
-            x = data.get('x', [])
-            y = data.get('y', {})
-            for series_name, series_data in y.items():
-                ax.plot(x, series_data, label=series_name)
-            ax.set_xlabel(data.get('x_label', 'X-axis'))
-            ax.set_ylabel(data.get('y_label', 'Y-axis'))
-            ax.legend()
         else:
             ax.text(0.5, 0.5, f"Unsupported chart type: {chart_type}", ha='center', va='center')
 
-        plt.title(data.get('title', ''))
+        plt.title(title)
         plt.tight_layout()
         return fig
 
