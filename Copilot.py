@@ -573,6 +573,7 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             charts = []
 
             for section in structure:
+                max_section_tokens = 1000  # Adjust this value as needed
                 section_prompt = f"""
                 You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
 
@@ -595,7 +596,7 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
                 Additional Instructions:
                 {additional_instructions}
 
-                Please generate a comprehensive and detailed {section} section for this Manuscript. Ensure that it follows scientific writing standards and provides all important details relevant to this section.
+                Please generate a concise and focused {section} section for this Manuscript. Do not include the section title in your response. Ensure that it follows scientific writing standards and provides all important details relevant to this section without unnecessary repetition or verbosity.
                 """
 
                 response = client.chat.completions.create(
@@ -604,17 +605,17 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
                         {"role": "system", "content": "You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types."},
                         {"role": "user", "content": section_prompt}
                     ],
-                    max_tokens=2000,
+                    max_tokens=max_section_tokens,
                     temperature=0
                 )
 
-                section_content = response.choices[0].message.content
+                section_content = response.choices[0].message.content.strip()
                 full_content += f"\n\n## {section}\n\n{section_content}"
 
                 # Extract chart information if present
                 if section == "Tables and Figures":
                     charts = extract_chart_info(section_content)
-
+            
             return {"content": full_content, "charts": charts}
         else:
             prompt = f"""
@@ -1096,8 +1097,10 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
         doc = Document()
         # Remove the '## Visualizations' section from content
         content_without_visualizations = re.sub(r'##\s+Visualizations\s*[\s\S]*', '', content, flags=re.IGNORECASE)
+        # Remove image tags from content
+        content_without_images = re.sub(r'<img[^>]*>', '', content_without_visualizations)
         # Convert Markdown to HTML
-        html_content = markdown2.markdown(content_without_visualizations)
+        html_content = markdown2.markdown(content_without_images)
         # Parse HTML content and add to Word document
         for line in html_content.split('\n'):
             if line.startswith("<h2>"):
