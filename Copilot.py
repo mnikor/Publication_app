@@ -778,6 +778,8 @@ def extract_chart_info(content: str) -> List[Dict[str, Any]]:
             chart_info = json.loads(json_str.strip())
             if validate_chart_data(chart_info):
                 charts.append(chart_info)
+            else:
+                logging.warning(f"Invalid chart data: {json_str}")
         except json.JSONDecodeError:
             logging.error(f"JSON decoding error in chart: {json_str}")
 
@@ -794,19 +796,38 @@ def extract_chart_info(content: str) -> List[Dict[str, Any]]:
                 "description": description
             })
 
+    # If still no charts found, log the entire content for debugging
+    if not charts:
+        logging.warning("No charts found. Content:")
+        logging.warning(content)
+
     return charts
 
 def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
-    required_fields = {"type", "title", "x_label", "y_label", "data_series", "data"}
+    if not isinstance(chart_info, dict):
+        logging.error(f"Chart info is not a dictionary: {chart_info}")
+        return False
+
+    required_fields = {"type", "title"}
     if not required_fields.issubset(chart_info.keys()):
         logging.error(f"Chart info missing required fields: {chart_info}")
         return False
-    
+
+    # For Text Description type, only title and description are required
+    if chart_info['type'] == "Text Description":
+        return "description" in chart_info
+
+    # For other chart types, check for additional required fields
+    additional_fields = {"x_label", "y_label", "data_series", "data"}
+    if not additional_fields.issubset(chart_info.keys()):
+        logging.error(f"Chart info missing additional required fields for non-text charts: {chart_info}")
+        return False
+
     # Validate data_series is a list of strings
     if not isinstance(chart_info['data_series'], list) or not all(isinstance(series, str) for series in chart_info['data_series']):
         logging.error("data_series must be a list of strings.")
         return False
-    
+
     # Validate data is a non-empty list of dictionaries
     if not isinstance(chart_info['data'], list) or not chart_info['data']:
         logging.error("Chart data is not a non-empty list.")
@@ -815,48 +836,16 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
         if not isinstance(entry, dict):
             logging.error(f"Data entry is not a dictionary: {entry}")
             return False
-    
-    # Additional checks based on chart type
-    chart_type = chart_info['type'].lower()
-    if chart_type == "pie chart" and len(chart_info['data_series']) != 1:
-        logging.error("Pie chart requires exactly one data series.")
-        return False
-    if chart_type in ["bar chart", "line chart", "scatter plot", "histogram"] and len(chart_info['data_series']) < 1:
-        logging.error(f"{chart_type.capitalize()} requires at least one data series.")
-        return False
-    if chart_type == "kaplan-meier curve" and len(chart_info['data_series']) == 2:
-        # For Kaplan-Meier, typically need time and event data
-        pass
-    if chart_type == "forest plot" and len(chart_info['data_series']) >= 3:
-        # Forest plots require effect sizes, confidence intervals, etc.
-        pass
-    
-    # Check for missing or non-numeric data in data_series
-    for series in chart_info['data_series']:
-        for entry in chart_info['data']:
-            if series not in entry or not isinstance(entry[series], (int, float, str)):
-                logging.error(f"Data series '{series}' has missing or invalid data in entry: {entry}")
-                return False
-    
-    # Additional checks for new chart types
-    if chart_type == "heatmap" and len(chart_info['data_series']) < 3:
-        logging.error("Heatmap requires at least three data series: x, y, and value.")
-        return False
-    if chart_type == "waterfall" and len(chart_info['data_series']) < 2:
-        logging.error("Waterfall chart requires at least two data series: categories and values.")
-        return False
-    if chart_type in ["box plot", "violin plot"] and len(chart_info['data_series']) < 2:
-        logging.error(f"{chart_type.capitalize()} requires at least two data series: categories and values.")
-        return False
 
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
     if chart_info.get("type") == "Text Description":
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.text(0.5, 0.5, chart_info["description"], wrap=True, horizontalalignment='center', verticalalignment='center')
+        ax.text(0.5, 0.5, chart_info.get("description", "No description available"), 
+                wrap=True, horizontalalignment='center', verticalalignment='center')
         ax.axis('off')
-        plt.title(chart_info["title"])
+        plt.title(chart_info.get("title", "Untitled Chart"))
         return fig
     
     # Existing code for creating charts from JSON data
