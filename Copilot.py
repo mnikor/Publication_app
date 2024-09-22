@@ -1310,6 +1310,12 @@ def main():
     publication_type = st.selectbox("Select publication type", list(PUBLICATION_TYPES.keys()))
     analysis_type = st.selectbox("Select analysis type", list(ANALYSIS_TYPES.keys()))
 
+def main():
+    st.title("Publication Copilot")
+
+    publication_type = st.selectbox("Select publication type", list(PUBLICATION_TYPES.keys()))
+    analysis_type = st.selectbox("Select analysis type", list(ANALYSIS_TYPES.keys()))
+
     # Display recommendations based on analysis type
     recommendations = get_source_document_recommendations(analysis_type)
     if recommendations:
@@ -1348,48 +1354,42 @@ def main():
         help="Choose the format for the generated publication."
     )
 
-if st.button("Generate"):
-    if user_input.strip():
-        with st.spinner("Generating content..."):
-            try:
-                result = generate_document_cached(publication_type, analysis_type, user_input, additional_instructions)
-                if result:
-                    if result["content"].startswith("An error occurred"):
-                        st.error(result["content"])
-                    else:
-                        # Display the generated content
-                        st.subheader("Generated Content:")
-                        content_without_visualizations = re.sub(r'##\s+Visualizations\s*[\s\S]*', '', result["content"], flags=re.IGNORECASE)
-                        st.markdown(content_without_visualizations, unsafe_allow_html=True)
-
-                        # Extract charts from the 'Visualizations' section
-                        charts = extract_chart_info(result["content"])
-
-                        if charts:
-                            st.subheader("Visualizations:")
-                            for chart_info in charts:
-                                if validate_chart_data(chart_info):
-                                    try:
-                                        fig, ax = create_chart(chart_info)
-                                        st.pyplot(fig)
-                                        plt.close(fig)  # Close the figure to free up memory
-                                    except Exception as e:
-                                        st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
-                                        logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
-                                        st.write("Chart data:")
-                                        st.json(chart_info)
-                                else:
-                                    st.warning("Received invalid chart data. Unable to visualize this chart.")
+    if st.button("Generate"):
+        if user_input.strip():
+            with st.spinner("Generating content..."):
+                try:
+                    result = generate_document_cached(publication_type, analysis_type, user_input, additional_instructions)
+                    if result:
+                        if result["content"].startswith("An error occurred"):
+                            st.error(result["content"])
                         else:
-                            st.info("No charts were generated for this content.")
+                            # Display the generated content
+                            st.subheader("Generated Content:")
+                            content_without_visualizations = re.sub(r'##\s+Visualizations\s*[\s\S]*', '', result["content"], flags=re.IGNORECASE)
+                            st.markdown(content_without_visualizations, unsafe_allow_html=True)
 
+                            # Extract charts from the 'Visualizations' section
+                            charts = extract_chart_info(result["content"])
 
-            except Exception as e:
-                st.error(f"An unexpected error occurred: {str(e)}")
-                logging.exception("An unexpected error occurred in the main application:")
-    else:
-        st.warning("Please enter some information or upload at least one file before generating.") 
-      # Assess content quality
+                            if charts:
+                                st.subheader("Visualizations:")
+                                for chart_info in charts:
+                                    if validate_chart_data(chart_info):
+                                        try:
+                                            fig, ax = create_chart(chart_info)
+                                            st.pyplot(fig)
+                                            plt.close(fig)  # Close the figure to free up memory
+                                        except Exception as e:
+                                            st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
+                                            logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
+                                            st.write("Chart data:")
+                                            st.json(chart_info)
+                                    else:
+                                        st.warning("Received invalid chart data. Unable to visualize this chart.")
+                            else:
+                                st.info("No charts were generated for this content.")
+
+                            # Assess content quality
                             quality_assessment = assess_content_quality(result["content"], publication_type, analysis_type)
 
                             # Display user-friendly quality assessment
