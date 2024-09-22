@@ -665,127 +665,139 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             Additional Instructions:
             {additional_instructions}
             """
-        elif publication_type == "Manuscript":
-            prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
+elif publication_type == "Manuscript":
+    prompt = f"""
+    You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
 
-            You are tasked with generating a comprehensive Manuscript that adheres to international standards for journal publications, combining the structure and guidelines of the following:
+    You are tasked with generating a comprehensive Manuscript that adheres to international standards for journal publications, combining the structure and guidelines of the following:
 
-            **Publication Type:** {publication_type}
-            **Analysis Type:** {analysis_type}
+    **Publication Type:** {publication_type}
+    **Analysis Type:** {analysis_type}
 
-            ### **Guidelines:**
+    ### **Guidelines:**
 
-            1. **Structure and Content:**
-               - **Title Page:**
-                 • Title: Concise, informative, and reflective of the study's main focus (10-20 words).
-                 • Authors: Full names, institutional affiliations, and ORCID IDs (if available).
-                 • Corresponding author: Full contact details.
-                 • Running title: Shortened version of the title (50 characters or less).
-                 • Word count: Total word count excluding abstract, references, tables, and figures.
-               - **Abstract:** Structured summary (250-300 words) including:
-                 • Background
-                 • Methods
-                 • Results
-                 • Conclusions
-                 • Keywords: 3-5 MeSH terms
-               - **Introduction:**
-                 • Provide context and rationale for the study
-                 • State the objective and hypothesis clearly
-                 • Briefly outline the approach
-               - **Methods:**
-                 • Study design and setting
-                 • Participants: Inclusion/exclusion criteria, recruitment process
-                 • Variables: Define primary and secondary outcomes
-                 • Data sources/measurement: Describe tools and procedures
-                 • Bias: Address potential sources of bias and how they were mitigated
-                 • Sample size: Justify the sample size or power calculation
-                 • Statistical methods: Describe all statistical tests and software used
-                 • Ethical considerations: State ethical approval and informed consent process
-               - **Results:**
-                 • Participants: Flow diagram of participant selection (if applicable)
-                 • Descriptive data: Demographic and clinical characteristics of participants
-                 • Main outcomes: Present primary and secondary outcome results
-                 • Additional analyses: Subgroup or sensitivity analyses
-               - **Discussion:**
-                 • Key findings: Summarize the main results
-                 • Interpretation: Compare results with existing literature
-                 • Strengths and limitations of the study
-                 • Implications for practice and future research
-               - **Conclusion:** Concise summary of main findings and their importance
-               - **Acknowledgements:** Recognize contributions of non-authors and funding sources
-               - **References:** Cite 30-50 relevant and recent sources, following journal-specific format
-               - **Tables and Figures:** Include 5-7 essential visual representations of data with detailed captions
+    1. **Structure and Content:**
+       - **Title Page:**
+         • Title: Concise, informative, and reflective of the study's main focus (10-20 words).
+         • Authors: Full names, institutional affiliations, and ORCID IDs (if available).
+         • Corresponding author: Full contact details.
+         • Running title: Shortened version of the title (50 characters or less).
+         • Word count: Total word count excluding abstract, references, tables, and figures.
+       - **Abstract:** Structured summary (250-300 words) including:
+         • Background
+         • Methods
+         • Results
+         • Conclusions
+         • Keywords: 3-5 MeSH terms
+       - **Introduction:**
+         • Provide context and rationale for the study
+         • State the objective and hypothesis clearly
+         • Briefly outline the approach
+       - **Methods:**
+         • Study design and setting
+         • Participants: Inclusion/exclusion criteria, recruitment process
+         • Variables: Define primary and secondary outcomes
+         • Data sources/measurement: Describe tools and procedures
+         • Bias: Address potential sources of bias and how they were mitigated
+         • Sample size: Justify the sample size or power calculation
+         • **Statistical Analysis:**
+           - Describe all statistical tests and software used
+           - Specify the level of significance (e.g., α = 0.05)
+           - Explain how missing data were handled
+           - Describe any sensitivity analyses performed
+           - For primary outcomes, state that effect sizes and confidence intervals will be reported
+           - For regression analyses, specify the covariates included and how they were selected
+           - For repeated measures, describe the approach to handling within-subject correlation
+           - If applicable, describe methods for adjusting for multiple comparisons
+         • Ethical considerations: State ethical approval and informed consent process
+       - **Results:**
+         • Participants: Flow diagram of participant selection (if applicable)
+         • Descriptive data: Demographic and clinical characteristics of participants
+         • Main outcomes: 
+           - Present primary and secondary outcome results
+           - Include effect sizes and 95% confidence intervals for primary outcomes
+           - Report actual p-values rather than inequality statements (e.g., p = 0.023 instead of p < 0.05)
+         • Additional analyses: Subgroup or sensitivity analyses
+       - **Discussion:**
+         • Key findings: Summarize the main results
+         • Interpretation: Compare results with existing literature
+         • Strengths and limitations of the study
+         • Implications for practice and future research
+       - **Conclusion:** Concise summary of main findings and their importance
+       - **Acknowledgements:** Recognize contributions of non-authors and funding sources
+       - **References:** Cite 30-50 relevant and recent sources, following journal-specific format
+       - **Tables and Figures:** Include 5-7 essential visual representations of data with detailed captions
 
-            2. **Document Length:**
-               - Maximum {max_length_pub} {length_type_pub} (excluding abstract, references, tables, and figures).
+    2. **Document Length:**
+       - Maximum {max_length_pub} {length_type_pub} (excluding abstract, references, tables, and figures).
 
-            3. **Writing Style and Formatting:**
-               - Use clear, concise language appropriate for an international scientific audience.
-               - Follow standard scientific writing conventions (e.g., IMRAD structure).
-               - Use past tense for completed actions and present tense for known facts and conclusions.
-               - Define abbreviations at first use.
-               - Use SI units for measurements.
-               - Follow AMA or APA style guide for general formatting.
+    3. **Writing Style and Formatting:**
+       - Use clear, concise language appropriate for an international scientific audience.
+       - Follow standard scientific writing conventions (e.g., IMRAD structure).
+       - Use past tense for completed actions and present tense for known facts and conclusions.
+       - Define abbreviations at first use.
+       - Use SI units for measurements.
+       - Follow AMA or APA style guide for general formatting.
 
-            4. **Ethical Considerations:**
-               - Include a statement on ethical approval and informed consent.
-               - Disclose any conflicts of interest.
-               - Adhere to ICMJE recommendations for authorship.
-               - Follow CONSORT, STROBE, or other relevant reporting guidelines.
+    4. **Ethical Considerations:**
+       - Include a statement on ethical approval and informed consent.
+       - Disclose any conflicts of interest.
+       - Adhere to ICMJE recommendations for authorship.
+       - Follow CONSORT, STROBE, or other relevant reporting guidelines.
 
-            5. **Data Presentation:**
-               - Present data accurately and completely.
-               - Use appropriate statistical tests and report p-values accurately.
-               - Include measures of variability (e.g., standard deviations) for numerical data.
-               - Consider using supplementary materials for extensive datasets.
+    5. **Data Presentation:**
+       - Present data accurately and completely.
+       - Use appropriate statistical tests and report p-values accurately.
+       - Include measures of variability (e.g., standard deviations) for numerical data.
+       - Report effect sizes and confidence intervals for primary outcomes.
+       - Consider using supplementary materials for extensive datasets.
 
-            6. **Visualizations:**
-               - Create clear, self-explanatory figures and tables.
-               - Provide detailed legends for all figures.
-               - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
+    6. **Visualizations:**
+       - Create clear, self-explanatory figures and tables.
+       - Provide detailed legends for all figures.
+       - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
 
-            ```json
-            {{
-              "type": "Chart Type (e.g., Bar Chart, Line Chart)",
-              "title": "Chart Title",
-              "x_label": "X-axis Label",
-              "y_label": "Y-axis Label",
-              "data_series": ["Numerical Series1", "Numerical Series2", ...],
-              "data": [
-                {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
-                ...
-              ]
-            }}
-            ```
+    ```json
+    {{
+      "type": "Chart Type (e.g., Bar Chart, Line Chart)",
+      "title": "Chart Title",
+      "x_label": "X-axis Label",
+      "y_label": "Y-axis Label",
+      "data_series": ["Numerical Series1", "Numerical Series2", ...],
+      "data": [
+        {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
+        ...
+      ]
+    }}
+    ```
 
-            7. **Tables:**
-               - Include up to 5-7 essential tables that complement the text.
-               - For each table:
-                 - Provide a detailed title
-                 - List column headers
-                 - Use actual data from the source document if available. Here's the extracted tabular data:
-                   {extracted_data}
-                 - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
-               - Use Markdown table syntax for creating tables.
+    7. **Tables:**
+       - Include up to 5-7 essential tables that complement the text.
+       - For each table:
+         - Provide a detailed title
+         - List column headers
+         - Use actual data from the source document if available. Here's the extracted tabular data:
+           {extracted_data}
+         - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
+       - Use Markdown table syntax for creating tables.
 
-            8. **Acknowledgement:**
-               - Include an Acknowledgement section at the end of the document with the following text:
-                 "This manuscript was created with the assistance of generative AI technology."
+    8. **Acknowledgement:**
+       - Include an Acknowledgement section at the end of the document with the following text:
+         "This manuscript was created with the assistance of generative AI technology."
 
-            Adherence to Guidelines:
-            Strictly adhere to the format and guidelines for both the Manuscript publication type and the specified analysis type.
-            Ensure that ALL sections specified in the combined structure are present and contain comprehensive, accurate content.
+    Adherence to Guidelines:
+    Strictly adhere to the format and guidelines for both the Manuscript publication type and the specified analysis type.
+    Ensure that ALL sections specified in the combined structure are present and contain comprehensive, accurate content.
 
-            Combined Structure:
-            {structure_info}
+    Combined Structure:
+    {structure_info}
 
-            Input:
-            {user_input}
+    Input:
+    {user_input}
 
-            Additional Instructions:
-            {additional_instructions}
-            """
+    Additional Instructions:
+    {additional_instructions}
+    """
         else:
             prompt = f"""
             You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
