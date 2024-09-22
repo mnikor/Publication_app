@@ -1388,7 +1388,8 @@ if st.button("Generate"):
                 st.error(f"An unexpected error occurred: {str(e)}")
                 logging.exception("An unexpected error occurred in the main application:")
     else:
-        st.warning("Please enter some information or upload at least one file before generating.")                            # Assess content quality
+        st.warning("Please enter some information or upload at least one file before generating.") 
+      # Assess content quality
                             quality_assessment = assess_content_quality(result["content"], publication_type, analysis_type)
 
                             # Display user-friendly quality assessment
