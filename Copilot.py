@@ -1,4 +1,6 @@
 
+
+
 import os
 import re
 import json
@@ -1332,7 +1334,8 @@ def main():
                                     if validate_chart_data(chart_info):
                                         try:
                                             fig = create_chart(chart_info)
-                                            st.pyplot(fig)
+                                            st.pyplot(fig)  # Add this line to display the chart
+                                            plt.close(fig)  # Close the figure to free up memory
                                         except Exception as e:
                                             st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
                                             logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
