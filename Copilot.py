@@ -468,7 +468,7 @@ def get_section_requirements(publication_type: str) -> str:
     - If in doubt about including information, err on the side of inclusion
     - Aim for a thorough, authoritative account of the study that leaves no important questions unanswered
     """
-else:
+    else:
         return ""
 
 def calculate_flesch_kincaid_grade(text: str) -> float:
