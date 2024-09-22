@@ -564,20 +564,35 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
         
         font_sizes = {**pub_type_info["font_sizes"], **analysis_type_info["font_sizes"]}
         font_size_info = ", ".join([f"{k.capitalize()}: {v}pt" for k, v in font_sizes.items()])
-
+    
         structure = list(dict.fromkeys(pub_type_info["structure"] + analysis_type_info["structure"]))
         structure_info = "\n".join([f"- {section}" for section in structure])
-
+    
         extracted_data = extract_tabular_data(user_input)
-
+    
+        # **Define section_requirements here**
+        section_requirements = get_section_requirements(publication_type)
+    
         if publication_type == "Plain Language Summary":
             prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
-
-            You are tasked with generating a comprehensive Plain Language Summary that combines the structure and guidelines of the following:
-
+            ... (existing prompt)
+            """
+        elif publication_type == "Congress Abstract":
+            prompt = f"""
+            ... (existing prompt)
+            """
+        elif publication_type == "Manuscript":
+            prompt = f"""
+            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into comprehensive manuscripts.
+    
+            **Critical Instructions**:
+            - Provide **extensive and detailed** content for each section, especially the **Methods** and **Statistical Analysis** sections.
+            - Include all relevant details, inferring information based on standard practices if necessary.
+            - Do not limit the length of these sections; ensure they are as detailed as appropriate for a scientific manuscript.
+    
             **Publication Type:** {publication_type}
             **Analysis Type:** {analysis_type}
+
 
             ### **Guidelines:**
 
