@@ -325,39 +325,41 @@ def get_section_requirements(publication_type: str) -> str:
              - For commercial names, use the format: generic (Commercial®).
              - Identify complex chemotherapeutic regimens clearly.
         """
-    elif publication_type == "Manuscript":
+def get_section_requirements(publication_type: str) -> str:
+    if publication_type == "Manuscript":
         return """
-           - Title: Reflect the content and findings of the study concisely.
-           - Abstract: Summarize the background, methods, results, and conclusions (250-300 words).
-           - Introduction:
+           - **Title**: Reflect the content and findings of the study concisely.
+           - **Abstract**: Summarize the background, methods, results, and conclusions (250-300 words).
+           - **Introduction**:
              - Provide background and context for the study.
              - State the research question or hypothesis.
              - Review relevant literature.
-           - Methods:
+           - **Methods**:
              - Describe the study design (e.g., randomized controlled trial, observational study).
              - Detail participant selection, inclusion/exclusion criteria.
              - Explain interventions or exposures.
              - Outline data collection methods.
              - Provide a comprehensive description of the statistical analysis plan, including software used and any adjustments for confounding variables.
-           - Results:
+           - **Results**:
              - Present findings in a logical sequence.
              - Use tables and figures to summarize data.
              - Report on primary and secondary outcomes.
-           - Discussion:
+           - **Discussion**:
              - Interpret the results in the context of existing literature.
              - Discuss the implications of the findings.
              - Address limitations of the study.
-           - Conclusion:
+           - **Conclusion**:
              - Summarize the main findings.
              - Suggest recommendations or future research directions.
-           - Acknowledgements: Recognize individuals or organizations that contributed but did not meet authorship criteria.
-           - References: List all sources cited in the text.
-           - Tables and Figures: Include relevant visuals with appropriate captions and legends.
-           - General guidelines:
+           - **Acknowledgements**: Recognize individuals or organizations that contributed but did not meet authorship criteria.
+           - **References**: List all sources cited in the text.
+           - **Tables and Figures**: Include relevant visuals with appropriate captions and legends.
+           - **General Guidelines**:
              - Ensure clarity, coherence, and logical flow.
              - Adhere to the target journal's formatting and style guidelines.
              - Use formal academic language and define all technical terms.
         """
+    
     elif publication_type == "Plain Language Summary":
         return """
            - Title: Simple, clear, and reflective of the main message. (10-15 words)
@@ -383,7 +385,6 @@ def get_section_requirements(publication_type: str) -> str:
         """
     else:
         return ""
-
 
 def calculate_flesch_kincaid_grade(text: str) -> float:
     return textstat.flesch_kincaid_grade(text)
@@ -563,75 +564,87 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
         
         font_sizes = {**pub_type_info["font_sizes"], **analysis_type_info["font_sizes"]}
         font_size_info = ", ".join([f"{k.capitalize()}: {v}pt" for k, v in font_sizes.items()])
-    
+
         structure = list(dict.fromkeys(pub_type_info["structure"] + analysis_type_info["structure"]))
         structure_info = "\n".join([f"- {section}" for section in structure])
-    
+
         extracted_data = extract_tabular_data(user_input)
-    
-        # Define section_requirements here
-        section_requirements = get_section_requirements(publication_type)
-    
+
         if publication_type == "Plain Language Summary":
             prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into Plain Language Summaries.
+            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
+
+            You are tasked with generating a comprehensive Plain Language Summary that combines the structure and guidelines of the following:
 
             **Publication Type:** {publication_type}
             **Analysis Type:** {analysis_type}
 
-            ### **Section Requirements:**
-
-            {section_requirements}
-
             ### **Guidelines:**
 
-            1. **Target Reading Level:**
-               - Write the summary at a 6th to 8th-grade reading level.
-               - Aim for short sentences averaging 15 words or fewer.
-               - Use simple sentence structures; avoid complex or compound sentences.
+            **Target Reading Level:**
+            - Write the summary at a 6th to 8th-grade reading level.
+            - Aim for short sentences averaging 15 words or fewer.
+            - Use simple sentence structures; avoid complex or compound sentences.
 
-            2. **Language and Style:**
-               - Use common, everyday words instead of medical jargon.
-               - If medical terms are necessary, explain them in simple language.
-               - Write in active voice and present tense where appropriate.
-               - Engage the reader by addressing them directly when suitable.
+            **Language and Style:**
+            - Use common, everyday words instead of medical jargon.
+            - If medical terms are necessary, explain them in simple language.
+            - Write in active voice and present tense where appropriate.
+            - Engage the reader by addressing them directly when suitable.
 
-            3. **Writing Tips:**
-               - Keep paragraphs brief (3-5 sentences).
-               - Use bullet points or numbered lists where appropriate.
-               - Address common questions patients might have.
-               - Avoid unnecessary words or filler content.
+            **Structure and Content:**
+            - **Title:** Simple and clear, reflecting the main message (10-15 words).
+            - **Key Points:** 3-5 bullet points summarizing the most important takeaways.
+            - **Background:** Brief context about the condition and why the study was done (2-3 sentences).
+            - **What Was the Study About?:** Clear statement of the study's purpose (1-2 sentences).
+            - **How Was the Study Done?:** Simple description of the study methods, avoiding technical details (2-3 sentences).
+            - **What Were the Results?:** Key findings in plain language, focusing on what's most relevant to patients (3-4 sentences).
+            - **What Do the Results Mean for Patients?:** Practical implications for patient care or decision-making (2-3 sentences).
+            - **What's Next?:** Mention any study limitations or ongoing research (1-2 sentences).
+            - **Disclosures:** Include funding sources and any potential conflicts of interest.
+            - **Review Statement:** State that the summary was reviewed by a medical expert and a patient advocate (if applicable).
 
-            4. **Final Review:**
-               - Before finalizing, read the summary aloud to ensure it flows naturally.
-               - Verify that the FKGL is between 6 and 8 using readability assessment tools.
-               - Make adjustments to sentence length and word choice as needed to achieve the target reading level.
+            **Acronyms and Abbreviations:**
+            - Spell out acronyms upon first use and provide a simple explanation if necessary.
 
-            **Input:**
+            **Visual Aids:**
+            - If helpful, include simple visual elements to explain key concepts.
+            - Ensure visuals are clearly labeled and easy to understand.
+
+            **Writing Tips:**
+            - Keep paragraphs brief (3-5 sentences).
+            - Use bullet points or numbered lists where appropriate.
+            - Address common questions patients might have.
+            - Avoid unnecessary words or filler content.
+
+            **Final Review:**
+            - Before finalizing, read the summary aloud to ensure it flows naturally.
+            - Verify that the FKGL is between 6 and 8 using readability assessment tools.
+            - Make adjustments to sentence length and word choice as needed to achieve the target reading level.
+
+            Input:
             {user_input}
 
-            **Additional Instructions:**
+            Additional Instructions:
             {additional_instructions}
             """
         elif publication_type == "Congress Abstract":
             prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into Congress Abstracts.
+            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
+
+            You are tasked with generating a scientific congress abstract following these guidelines:
 
             **Publication Type:** {publication_type}
             **Analysis Type:** {analysis_type}
 
-            ### **Section Requirements:**
-
-            {section_requirements}
-
             ### **Guidelines:**
 
             1. **Structure:**
-               - Create an abstract with the following sections:
-                 - Background
-                 - Methods
-                 - Results
-                 - Conclusions
+               Create an abstract with the following four sections:
+               a) Background: Provide a brief introduction explaining the study's rationale.
+               b) Methods: Describe the key methodological procedures concisely.
+               c) Results: Summarize the main findings of the research.
+               d) Conclusions: State the primary conclusions drawn from the study.
 
             2. **Title:**
                - Craft a title that reflects the abstract's content using significant words.
@@ -657,27 +670,20 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
                - Maintain a professional and scientific tone throughout the abstract.
                - Focus on presenting the most crucial and impactful aspects of the study within the limited space.
 
-            **Input:**
+            Input:
             {user_input}
 
-            **Additional Instructions:**
+            Additional Instructions:
             {additional_instructions}
             """
-        elif publication_type == "Manuscript":
+        else:
             prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into comprehensive manuscripts.
+            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
 
-            **Critical Instructions**:
-            - Provide **extensive and detailed** content for each section, especially the **Methods** and **Statistical Analysis** sections.
-            - Include all relevant details, inferring information based on standard practices if necessary.
-            - Do not limit the length of these sections; ensure they are as detailed as appropriate for a scientific manuscript.
+            You are tasked with generating a comprehensive document that combines the structure and guidelines of the following:
 
             **Publication Type:** {publication_type}
             **Analysis Type:** {analysis_type}
-
-            ### **Section Requirements:**
-
-            {section_requirements}
 
             ### **Guidelines:**
 
@@ -685,17 +691,16 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
                - **Publication:** Maximum {max_length_pub} {length_type_pub}.
                - **Analysis:** Maximum {max_length_analysis} {length_type_analysis}.
 
-            2. **Structure:**
-               - Include all sections from both the publication type and analysis type.
-               - Use Markdown syntax for headings (e.g., ## Methods).
+            2. **Font Sizes:**
+               - {font_size_info}
 
-            3. **Content Generation:**
-               - Use clear, precise, and formal academic language.
-               - If specific information is missing, infer plausible details based on standard practices.
+            3. **Structure:**
+               - The document should include all sections from both the publication type and analysis type. Ensure that each section is clearly marked using Markdown syntax (e.g., ## Title, ### Methods).
+               - Provide detailed and comprehensive content for each section. Aim for at least 2-3 sentences per section, unless otherwise specified.
 
-            4. **Important Note**:
-               - The **Methods** section should include detailed information on the study design, participant selection, interventions, data collection procedures, and statistical analyses. Do not omit any critical details.
-               - The **Statistical Analysis** section should thoroughly explain all statistical methods used, including assumptions, software, and handling of data.
+            4. **Content Generation:**
+               - Use clear and concise language appropriate for a scientific publication.
+               - If specific information is not provided in the input, use placeholder text or general statements that would be appropriate for the section.
 
             5. **Visualizations:**
                - Extract key numerical data from the input and suggest up to 2 relevant charts or visualizations.
@@ -715,87 +720,35 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             }}
             ```
 
-            - After completing the publication and analysis content, provide a separate section titled "## Visualizations" containing all chart JSON data.
+            After completing the publication and analysis content, provide a separate section titled "## Visualizations" containing all chart JSON data.
 
             6. **Tables:**
                - Include up to 5-7 essential tables that complement the text.
                - For each table:
-                 - Provide a detailed title.
-                 - List column headers.
+                 - Provide a detailed title
+                 - List column headers
                  - Use actual data from the source document if available. Here's the extracted tabular data:
                    {extracted_data}
-                 - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information.
+                 - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
                - Use Markdown table syntax for creating tables.
 
             7. **Acknowledgement:**
                - ALWAYS include an Acknowledgement section at the end of the document with the following text:
-                 "This {publication_type} was created with the assistance of generative AI technology."
+                 "This [publication type] was created with the assistance of generative AI technology."
 
-            **Adherence to Guidelines:**
-            - Strictly adhere to the format and guidelines for both the publication type and analysis type.
-            - Ensure that **ALL** sections specified in the combined structure are present and contain detailed and comprehensive content.
+            Adherence to Guidelines:
+            Strictly adhere to the format and guidelines for both the publication type and analysis type.
+            Ensure that ALL sections specified in the combined structure are present and contain at least minimal content.
 
-            **Combined Structure:**
+            Combined Structure:
             {structure_info}
 
-            **Input:**
+            Input:
             {user_input}
 
-            **Additional Instructions:**
+            Additional Instructions:
             {additional_instructions}
             """
-        else:
-            # Default case or other publication types
-            prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into {publication_type}s.
-
-            **Publication Type:** {publication_type}
-            **Analysis Type:** {analysis_type}
-
-            ### **Section Requirements:**
-
-            {section_requirements}
-
-            ### **Guidelines:**
-
-            - Use clear, precise, and formal academic language.
-            - Ensure that all sections specified in the combined structure are present and contain detailed and comprehensive content.
-            - Use Markdown syntax for headings (e.g., ## Methods).
-
-            **Combined Structure:**
-            {structure_info}
-
-            **Input:**
-            {user_input}
-
-            **Additional Instructions:**
-            {additional_instructions}
-            """
-
-        # Now generate the document using the OpenAI API
-        response = client.chat.completions.create(
-            model="gpt-4o-2024-08-06",
-            messages=[
-                {"role": "system", "content": "You are a professional scientific medical writing assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=16000,
-            temperature=0,  # Ensures consistency
-        )
-
-        full_content = response.choices[0].message.content
-
-        # Extract chart information
-        charts = extract_chart_info(full_content)
-        
-        logging.debug(f"Extracted charts: {charts}")
-
-        return {"content": full_content, "charts": charts}
-
-    except Exception as e:
-        logging.error(f"Error in generate_document: {str(e)}")
-        return {"content": f"An error occurred while generating the document: {str(e)}", "charts": []}
-
 
         client = OpenAI()
 
