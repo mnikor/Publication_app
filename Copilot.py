@@ -1,5 +1,4 @@
 
-
 import os
 import re
 import json
@@ -743,39 +742,15 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
         return {"content": f"An error occurred while generating the document: {str(e)}", "charts": []}
 
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
-    """
-    Extracts chart information from the '## Visualizations' section of the generated content.
-
-    Parameters:
-    - content (str): The full generated content containing chart JSON.
-
-    Returns:
-    - List[Dict[str, Any]]: A list of chart information dictionaries.
-    """
     charts = []
-    # Locate the '## Visualizations' section
-    visualizations_match = re.search(r'##\s+Visualizations\s*([\s\S]*)', content, re.IGNORECASE)
-    if visualizations_match:
-        visualizations_content = visualizations_match.group(1)
-        logging.debug(f"Found 'Visualizations' section:\n{visualizations_content}")
-        # Find all JSON blocks within the 'Visualizations' section
-        json_blocks = re.findall(r'```json\s*([\s\S]*?)```', visualizations_content, re.DOTALL | re.IGNORECASE)
-        logging.debug(f"Found {len(json_blocks)} JSON blocks in 'Visualizations' section.")
-        for idx, json_str in enumerate(json_blocks, 1):
-            try:
-                json_str = json_str.strip()
-                chart_info = json.loads(json_str)
-                # Validate required fields
-                if not validate_chart_data(chart_info):
-                    logging.warning(f"Chart {idx} is missing required fields or has invalid data.")
-                    continue
+    json_blocks = re.findall(r'JSON:\s*(\{[\s\S]*?\})', content)
+    for json_str in json_blocks:
+        try:
+            chart_info = json.loads(json_str)
+            if isinstance(chart_info, dict) and 'type' in chart_info and 'data' in chart_info:
                 charts.append(chart_info)
-                logging.debug(f"Chart {idx} extracted successfully.")
-            except json.JSONDecodeError as e:
-                logging.error(f"JSON decoding error in chart {idx}: {e} in block: {json_str}")
-                continue
-    else:
-        logging.warning("No 'Visualizations' section found in the generated content.")
+        except json.JSONDecodeError as e:
+            logging.error(f"JSON decoding error: {e} in block: {json_str}")
     return charts
 
 def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
@@ -834,141 +809,37 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
-    """
-    Creates a Matplotlib figure based on the provided chart information.
-
-    Parameters:
-    - chart_info (Dict[str, Any]): Dictionary containing chart specifications.
-
-    Returns:
-    - plt.Figure: The created Matplotlib figure.
-    """
     chart_type = chart_info.get('type', '').lower()
-    title = chart_info.get('title', '')
-    x_label = chart_info.get('x_label', '')
-    y_label = chart_info.get('y_label', '')
-    data_series = chart_info.get('data_series', [])
-    data = chart_info.get('data', [])
+    data = chart_info.get('data', {})
 
-    if not data:
-        raise ValueError("No data available for chart creation")
-
-    df = pd.DataFrame(data)
-    # Convert numeric columns to numbers, if possible
-    for col in df.columns:
-        if col != x_label and df[col].dtype == object:
-            df[col] = pd.to_numeric(df[col].astype(str).str.replace('%', ''), errors='coerce')
-
-    fig, ax = plt.subplots(figsize=(10, 6))  # Adjust figure size
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     try:
-        if 'bar' in chart_type:
-            if x_label in df.columns:
-                bars = df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
-                for bar in bars.containers:
-                    ax.bar_label(bar, label_type='edge')
-            else:
-                raise ValueError(f"X-axis label '{x_label}' not found in data columns.")
-        elif 'line' in chart_type:
-            if x_label in df.columns:
-                lines = df.plot(kind='line', x=x_label, y=data_series, ax=ax, marker='o')
-                for line in lines.get_lines():
-                    for x, y in zip(line.get_xdata(), line.get_ydata()):
-                        ax.text(x, y, f'{y:.2f}', ha='center', va='bottom')
-            else:
-                raise ValueError(f"X-axis label '{x_label}' not found in data columns.")
-        elif 'pie' in chart_type:
-            if len(data_series) == 1:
-                wedges, texts, autotexts = ax.pie(df[data_series[0]], labels=df[x_label], autopct='%1.1f%%', startangle=90)
-                for autotext in autotexts:
-                    autotext.set_color('white')
-                ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-            else:
-                raise ValueError("Pie chart requires exactly one data series.")
-        elif 'scatter' in chart_type:
-            if len(data_series) == 2:
-                scatter = df.plot(kind='scatter', x=data_series[0], y=data_series[1], ax=ax)
-                for i, txt in enumerate(df[x_label]):
-                    ax.annotate(txt, (df[data_series[0]][i], df[data_series[1]][i]))
-            else:
-                raise ValueError("Scatter plot requires exactly two data series.")
-        elif 'histogram' in chart_type:
-            if len(data_series) == 1:
-                hist = df[data_series[0]].plot(kind='hist', ax=ax, bins=10, edgecolor='black')
-                for patch in hist.patches:
-                    ax.text(patch.get_x() + patch.get_width() / 2, patch.get_height(), f'{patch.get_height()}', ha='center', va='bottom')
-            else:
-                raise ValueError("Histogram requires exactly one data series.")
-        elif 'kaplan-meier curve' in chart_type:
-            if len(data_series) >= 2:
-                kmf = KaplanMeierFitter()
-                # Assume first series is duration and second is event observed
-                duration_col = data_series[0]
-                event_col = data_series[1]
-                if len(data_series) > 2:
-                    groups = data_series[2]
-                    for group in df[groups].unique():
-                        mask = df[groups] == group
-                        kmf.fit(df[duration_col][mask], event_observed=df[event_col][mask], label=str(group))
-                        kmf.plot_survival_function(ax=ax)
-                else:
-                    kmf.fit(df[duration_col], event_observed=df[event_col], label="All")
-                    kmf.plot_survival_function(ax=ax)
-                ax.set_xlabel(x_label, fontsize=12)
-                ax.set_ylabel(y_label, fontsize=12)
-            else:
-                raise ValueError("Kaplan-Meier curve requires at least two data series: duration and event observed.")
-        elif 'heatmap' in chart_type:
-            if len(data_series) >= 2:
-                pivot_df = df.pivot(index=data_series[0], columns=data_series[1], values=data_series[2])
-                sns.heatmap(pivot_df, annot=True, cmap='YlOrRd', ax=ax)
-                ax.set_xlabel(data_series[1], fontsize=12)
-                ax.set_ylabel(data_series[0], fontsize=12)
-            else:
-                raise ValueError("Heatmap requires at least three data series: x, y, and value.")
-        elif 'waterfall' in chart_type:
-            if len(data_series) >= 2:
-                df = df.sort_values(by=data_series[1], ascending=False)
-                df['cumulative'] = df[data_series[1]].cumsum()
-                df['base'] = df['cumulative'] - df[data_series[1]]
-                
-                colors = ['g' if x >= 0 else 'r' for x in df[data_series[1]]]
-                ax.bar(df[data_series[0]], df[data_series[1]], bottom=df['base'], color=colors)
-                
-                for i, (index, row) in enumerate(df.iterrows()):
-                    ax.text(i, row['cumulative'], f'{row[data_series[1]]:.1f}', 
-                            ha='center', va='bottom' if row[data_series[1]] >= 0 else 'top')
-                
-                ax.set_xlabel(data_series[0], fontsize=12)
-                ax.set_ylabel(data_series[1], fontsize=12)
-                ax.set_xticklabels(df[data_series[0]], rotation=45, ha='right')
-            else:
-                raise ValueError("Waterfall chart requires at least two data series: categories and values.")
-        elif 'box plot' in chart_type:
-            if len(data_series) >= 2:
-                sns.boxplot(x=data_series[0], y=data_series[1], data=df, ax=ax)
-                ax.set_xlabel(data_series[0], fontsize=12)
-                ax.set_ylabel(data_series[1], fontsize=12)
-            else:
-                raise ValueError("Box plot requires at least two data series: categories and values.")
-        elif 'violin plot' in chart_type:
-            if len(data_series) >= 2:
-                sns.violinplot(x=data_series[0], y=data_series[1], data=df, ax=ax)
-                ax.set_xlabel(data_series[0], fontsize=12)
-                ax.set_ylabel(data_series[1], fontsize=12)
-            else:
-                raise ValueError("Violin plot requires at least two data series: categories and values.")
+        if chart_type == 'flowchart':
+            # For flowcharts, we'll just display the node labels
+            nodes = data.get('nodes', [])
+            for i, node in enumerate(nodes):
+                ax.text(0.5, 1 - (i+1)/(len(nodes)+1), node['label'], ha='center', va='center', bbox=dict(facecolor='white', edgecolor='black'))
+            ax.axis('off')
+        elif chart_type == 'table':
+            columns = data.get('columns', [])
+            rows = data.get('rows', [])
+            cell_text = [[row.get(col, '') for col in columns] for row in rows]
+            ax.axis('tight')
+            ax.axis('off')
+            table = ax.table(cellText=cell_text, colLabels=columns, loc='center', cellLoc='center')
+            table.auto_set_font_size(False)
+            table.set_fontsize(9)
+            table.scale(1, 1.5)
         else:
-            raise ValueError(f"Unsupported chart type: {chart_type}")
+            ax.text(0.5, 0.5, f"Unsupported chart type: {chart_type}", ha='center', va='center')
 
-        ax.set_title(title, fontsize=14)
         plt.tight_layout()
-
         return fig
 
     except Exception as e:
         plt.close(fig)
-        logging.error(f"Error creating chart '{title}': {str(e)}")
+        logging.error(f"Error creating chart: {str(e)}")
         raise
 
 def extract_text_from_pdf(file):
