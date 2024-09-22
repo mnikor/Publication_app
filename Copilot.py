@@ -328,33 +328,33 @@ def get_section_requirements(publication_type: str) -> str:
 def get_section_requirements(publication_type: str) -> str:
     if publication_type == "Manuscript":
         return """
-           - **Title**: Reflect the content and findings of the study concisely.
-           - **Abstract**: Summarize the background, methods, results, and conclusions (250-300 words).
-           - **Introduction**:
+           - Title: Reflect the content and findings of the study concisely.
+           - Abstract: Summarize the background, methods, results, and conclusions (250-300 words).
+           - Introduction:
              - Provide background and context for the study.
              - State the research question or hypothesis.
              - Review relevant literature.
-           - **Methods**:
+           - Methods:
              - Describe the study design (e.g., randomized controlled trial, observational study).
              - Detail participant selection, inclusion/exclusion criteria.
              - Explain interventions or exposures.
              - Outline data collection methods.
              - Provide a comprehensive description of the statistical analysis plan, including software used and any adjustments for confounding variables.
-           - **Results**:
+           - Results:
              - Present findings in a logical sequence.
              - Use tables and figures to summarize data.
              - Report on primary and secondary outcomes.
-           - **Discussion**:
+           - Discussion:
              - Interpret the results in the context of existing literature.
              - Discuss the implications of the findings.
              - Address limitations of the study.
-           - **Conclusion**:
+           - Conclusion:
              - Summarize the main findings.
              - Suggest recommendations or future research directions.
-           - **Acknowledgements**: Recognize individuals or organizations that contributed but did not meet authorship criteria.
-           - **References**: List all sources cited in the text.
-           - **Tables and Figures**: Include relevant visuals with appropriate captions and legends.
-           - **General Guidelines**:
+           - Acknowledgements: Recognize individuals or organizations that contributed but did not meet authorship criteria.
+           - References: List all sources cited in the text.
+           - Tables and Figures: Include relevant visuals with appropriate captions and legends.
+           - General guidelines:
              - Ensure clarity, coherence, and logical flow.
              - Adhere to the target journal's formatting and style guidelines.
              - Use formal academic language and define all technical terms.
