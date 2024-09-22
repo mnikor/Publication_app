@@ -33,7 +33,6 @@ from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
-import networkx as nx
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -819,16 +818,18 @@ def create_chart(chart_info: Dict[str, Any]):
 
     try:
         if chart_type == 'flowchart':
+            # Simple text-based representation of flowchart
             nodes = chart_info.get('nodes', [])
             edges = chart_info.get('edges', [])
-            G = nx.DiGraph()
+            ax.axis('off')
+            y_positions = {node['id']: 1 - (i / (len(nodes) - 1)) for i, node in enumerate(nodes)}
             for node in nodes:
-                G.add_node(node['id'], label=node['label'])
+                ax.text(0.5, y_positions[node['id']], node['label'], ha='center', va='center', bbox=dict(facecolor='lightblue', edgecolor='black', boxstyle='round'))
             for edge in edges:
-                G.add_edge(edge['from'], edge['to'])
-            pos = nx.spring_layout(G)
-            nx.draw(G, pos, ax=ax, with_labels=False, node_color='lightblue', node_size=3000, arrows=True)
-            nx.draw_networkx_labels(G, pos, {node['id']: node['label'] for node in nodes}, ax=ax)
+                start_y = y_positions[edge['from']]
+                end_y = y_positions[edge['to']]
+                ax.annotate('', xy=(0.5, end_y), xytext=(0.5, start_y),
+                            arrowprops=dict(arrowstyle='->'))
         elif chart_type == 'table':
             columns = chart_info.get('columns', [])
             rows = chart_info.get('rows', [])
