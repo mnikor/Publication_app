@@ -348,31 +348,127 @@ def get_section_requirements(publication_type: str) -> str:
            - Disclosures: Include funding sources and any potential conflicts of interest.
            - Review: Mention that the summary has been reviewed by both a medical expert and a patient advocate (if applicable).
         """
-    elif publication_type == "Manuscript":
-        return """
-           - Title: Concise, informative, and reflective of the study's main focus. (Typically 10-15 words)
-           - Authors and Affiliations: Full names and institutional affiliations of all authors.
-           - Abstract: Structured summary of the study (typically 250-300 words), including:
-             • Background
-             • Methods
-             • Results
-             • Conclusions
-           - Introduction: Provide context, state the objective, and outline the hypothesis.
-           - Methods: Detailed description of study design, participants, interventions, and statistical analyses.
-           - Results: Present findings with appropriate statistical analysis and without interpretation.
-           - Discussion: Interpret results in the context of other evidence, address limitations, and state implications.
-           - Conclusion: Summarize main findings and their importance.
-           - Acknowledgements: Recognize contributions of non-authors and funding sources.
-           - References: Cite relevant literature (typically 30-50 references for original research).
-           - Tables and Figures: Include essential visual representations of data (typically 5-7 total).
-           - General guidelines:
-             - Maximum 3,500 words (excluding abstract, references, tables, and figures).
-             - Use clear, concise language appropriate for a scientific audience.
-             - Follow standard scientific writing conventions and journal-specific formatting guidelines.
-             - Define abbreviations at first use.
-             - Use past tense for completed actions and present tense for known facts and conclusions.
-        """
-    else:
+elif publication_type == "Manuscript":
+    return """
+    - Title:
+      • Concise, informative, and reflective of the study's main focus (typically 10-20 words)
+      • Include key elements such as study design, population, and primary outcome
+      • Avoid abbreviations and declarative statements of results
+
+    - Authors and Affiliations:
+      • Full names, highest academic degrees, and institutional affiliations of all authors
+      • Clearly indicate the corresponding author and provide their full contact details
+      • Include any study group name if applicable
+
+    - Abstract:
+      • Structured summary (250-300 words) including:
+        - Background: Context and rationale for the study
+        - Objective: Specific aims or hypotheses
+        - Methods: Basic study design, participants, interventions, and main outcome measures
+        - Results: Key findings with effect sizes and precision (e.g., 95% confidence interval)
+        - Conclusions: Main interpretations and implications of the results
+      • Provide the trial registration number at the end
+
+    - Introduction (typically 3-5 paragraphs):
+      • Provide a compelling rationale for the study based on existing literature
+      • Clearly state the knowledge gap this study addresses
+      • Define the specific objective(s) or hypothesis(es)
+      • Briefly outline the approach
+
+    - Methods:
+      • Study Design:
+        - Describe the type of study (e.g., randomized controlled trial, cohort study)
+        - Specify any changes to methods after trial commencement, with reasons
+      • Participants:
+        - Detail eligibility criteria, settings, and locations where data were collected
+        - Describe recruitment procedures and any pre-randomization assessments
+      • Interventions:
+        - Provide precise details of the interventions for each group
+        - Include how and when they were actually administered
+      • Outcomes:
+        - Define all primary and secondary outcome measures
+        - Specify their measurement methods and timing
+      • Sample Size:
+        - Explain how sample size was determined
+        - Describe any interim analyses and stopping guidelines
+      • Randomization:
+        - Detail the method used to generate the random allocation sequence
+        - Describe the mechanism used to implement the allocation sequence
+        - Specify who generated the sequence, enrolled participants, and assigned them to interventions
+      • Blinding:
+        - Describe who was blinded after assignment to interventions
+      • Statistical Methods:
+        - Describe methods used to compare groups for primary and secondary outcomes
+        - Explain methods for any additional analyses (e.g., subgroup or adjusted analyses)
+
+    - Results:
+      • Participant Flow:
+        - Provide a diagram showing participant flow through each stage of the study
+        - For each group, report the numbers randomly assigned, receiving intended treatment, and analyzed for the primary outcome
+      • Recruitment:
+        - State the dates defining the periods of recruitment and follow-up
+      • Baseline Data:
+        - Provide a table showing baseline demographic and clinical characteristics for each group
+      • Numbers Analyzed:
+        - For each group, report numbers of participants analyzed and whether analysis was by original assigned groups
+      • Outcomes and Estimation:
+        - For each primary and secondary outcome, provide results for each group, the estimated effect size, and its precision (e.g., 95% confidence interval)
+        - For binary outcomes, present both absolute and relative effect sizes
+      • Ancillary Analyses:
+        - Report results of any other analyses performed, including subgroup analyses and adjusted analyses, distinguishing pre-specified from exploratory
+      • Harms:
+        - Report all important harms or unintended effects in each group
+
+    - Discussion:
+      • Key Findings:
+        - Summarize key results with reference to study objectives
+      • Limitations:
+        - Discuss limitations of the study, addressing sources of potential bias or imprecision
+      • Interpretation:
+        - Provide a general interpretation of the results in the context of current evidence
+      • Generalizability:
+        - Discuss the external validity (generalizability) of the trial findings
+
+    - Conclusion:
+      • Summarize the main findings
+      • State their importance and implications for practice or future research
+
+    - Acknowledgements:
+      • Recognize all persons who contributed but do not meet authorship criteria
+      • Specify their contributions
+      • List all sources of funding and the role of funders in the study
+
+    - References:
+      • Cite 30-50 relevant and recent sources for original research
+      • Follow journal-specific formatting guidelines
+      • Ensure all in-text citations are included and vice versa
+
+    - Tables and Figures:
+      • Include 5-7 essential visual representations of data
+      • Provide clear, self-explanatory titles and legends
+      • Ensure all abbreviations are explained in footnotes
+
+    General Guidelines:
+    - Maximum 3,500 words (excluding abstract, references, tables, and figures)
+    - Use clear, precise language appropriate for a scientific audience, prioritizing thoroughness over brevity
+    - Provide comprehensive explanations and detailed descriptions for each section
+    - Include all relevant information, data, and context necessary for a complete understanding of the study
+    - Elaborate on complex concepts, methodologies, and findings
+    - Use specific examples, detailed explanations, and thorough justifications
+    - Aim for depth and breadth in coverage while maintaining logical flow
+    - Use topic sentences followed by supporting details to build comprehensive paragraphs
+    - Incorporate relevant background information and contextual details
+    - Provide sufficient detail in methods to allow for potential replication
+    - Use precise terminology and define specialized terms or acronyms upon first use
+    - Quantify findings whenever possible, providing exact figures, percentages, and statistical analyses
+    - Address potential questions or areas of ambiguity proactively
+    - Ensure each section is self-contained and comprehensive, while connecting logically to other sections
+    - Follow standard scientific writing conventions (e.g., IMRAD structure)
+    - Use past tense for completed actions and present tense for known facts and conclusions
+    - If in doubt about including information, err on the side of inclusion
+    - Aim for a thorough, authoritative account of the study that leaves no important questions unanswered
+    """
+else:
         return ""
 
 def calculate_flesch_kincaid_grade(text: str) -> float:
