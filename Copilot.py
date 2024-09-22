@@ -348,8 +348,8 @@ def get_section_requirements(publication_type: str) -> str:
            - Disclosures: Include funding sources and any potential conflicts of interest.
            - Review: Mention that the summary has been reviewed by both a medical expert and a patient advocate (if applicable).
         """
-   elif publication_type == "Manuscript":
-       return """
+    elif publication_type == "Manuscript":
+        return """
     - Title:
       • Concise, informative, and reflective of the study's main focus (typically 10-20 words)
       • Include key elements such as study design, population, and primary outcome
