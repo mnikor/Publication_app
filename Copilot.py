@@ -909,35 +909,35 @@ Ensure that each of these sections is thoroughly addressed, providing specific d
                - Use clear and concise language appropriate for a scientific publication.
                - If specific information is not provided in the input, use placeholder text or general statements that would be appropriate for the section.
 
-            5. **Visualizations:**
-               - Extract key numerical data from the input and suggest up to 2 relevant charts or visualizations.
-               - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
+5. **Tables and Figures:**
+   - Generate at least 3-5 detailed tables based on the study data. Each table should have:
+     • A clear, descriptive title
+     • Appropriate column headers
+     • Relevant data from the study (use placeholder data if specific numbers are not provided)
+   - Create at least 2-3 figures or charts to visually represent key findings. For each figure/chart:
+     • Provide a descriptive title
+     • Include axis labels and units
+     • Describe the data to be plotted
+   - Ensure all tables and figures are referenced and briefly described in the text
 
-            ```json
-            {{
-              "type": "Chart Type (e.g., Bar Chart, Line Chart)",
-              "title": "Chart Title",
-              "x_label": "X-axis Label",
-              "y_label": "Y-axis Label",
-              "data_series": ["Numerical Series1", "Numerical Series2", ...],
-              "data": [
-                {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
-                ...
-              ]
-            }}
-            ```
+6. **Visualizations:**
+   - In addition to tables, provide data for at least 2 charts in the following JSON format:
 
-            After completing the publication and analysis content, provide a separate section titled "## Visualizations" containing all chart JSON data.
+   ```json
+   {{
+     "type": "Chart Type (e.g., Bar Chart, Line Chart)",
+     "title": "Chart Title",
+     "x_label": "X-axis Label",
+     "y_label": "Y-axis Label",
+     "data_series": ["Numerical Series1", "Numerical Series2", ...],
+     "data": [
+       {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
+       ...
+     ]
+   }}
+   ```
 
-            6. **Tables:**
-               - Include up to 5-7 essential tables that complement the text.
-               - For each table:
-                 - Provide a detailed title
-                 - List column headers
-                 - Use actual data from the source document if available. Here's the extracted tabular data:
-                   {extracted_data}
-                 - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
-               - Use Markdown table syntax for creating tables.
+   Ensure that you provide complete and realistic data for these charts based on the study information.
 
             7. **Acknowledgement:**
                - ALWAYS include an Acknowledgement section at the end of the document with the following text:
