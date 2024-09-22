@@ -325,7 +325,8 @@ def get_section_requirements(publication_type: str) -> str:
              - For commercial names, use the format: generic (Commercial®).
              - Identify complex chemotherapeutic regimens clearly.
         """
-    elif publication_type == "Manuscript":
+def get_section_requirements(publication_type: str) -> str:
+    if publication_type == "Manuscript":
         return """
            - **Title**: Reflect the content and findings of the study concisely.
            - **Abstract**: Summarize the background, methods, results, and conclusions (250-300 words).
@@ -358,6 +359,7 @@ def get_section_requirements(publication_type: str) -> str:
              - Adhere to the target journal's formatting and style guidelines.
              - Use formal academic language and define all technical terms.
         """
+    
     elif publication_type == "Plain Language Summary":
         return """
            - Title: Simple, clear, and reflective of the main message. (10-15 words)
