@@ -348,126 +348,6 @@ def get_section_requirements(publication_type: str) -> str:
            - Disclosures: Include funding sources and any potential conflicts of interest.
            - Review: Mention that the summary has been reviewed by both a medical expert and a patient advocate (if applicable).
         """
-    elif publication_type == "Manuscript":
-        return """
-    - Title:
-      • Concise, informative, and reflective of the study's main focus (typically 10-20 words)
-      • Include key elements such as study design, population, and primary outcome
-      • Avoid abbreviations and declarative statements of results
-
-    - Authors and Affiliations:
-      • Full names, highest academic degrees, and institutional affiliations of all authors
-      • Clearly indicate the corresponding author and provide their full contact details
-      • Include any study group name if applicable
-
-    - Abstract:
-      • Structured summary (250-300 words) including:
-        - Background: Context and rationale for the study
-        - Objective: Specific aims or hypotheses
-        - Methods: Basic study design, participants, interventions, and main outcome measures
-        - Results: Key findings with effect sizes and precision (e.g., 95% confidence interval)
-        - Conclusions: Main interpretations and implications of the results
-      • Provide the trial registration number at the end
-
-    - Introduction (typically 3-5 paragraphs):
-      • Provide a compelling rationale for the study based on existing literature
-      • Clearly state the knowledge gap this study addresses
-      • Define the specific objective(s) or hypothesis(es)
-      • Briefly outline the approach
-
-    - Methods:
-      • Study Design:
-        - Describe the type of study (e.g., randomized controlled trial, cohort study)
-        - Specify any changes to methods after trial commencement, with reasons
-      • Participants:
-        - Detail eligibility criteria, settings, and locations where data were collected
-        - Describe recruitment procedures and any pre-randomization assessments
-      • Interventions:
-        - Provide precise details of the interventions for each group
-        - Include how and when they were actually administered
-      • Outcomes:
-        - Define all primary and secondary outcome measures
-        - Specify their measurement methods and timing
-      • Sample Size:
-        - Explain how sample size was determined
-        - Describe any interim analyses and stopping guidelines
-      • Randomization:
-        - Detail the method used to generate the random allocation sequence
-        - Describe the mechanism used to implement the allocation sequence
-        - Specify who generated the sequence, enrolled participants, and assigned them to interventions
-      • Blinding:
-        - Describe who was blinded after assignment to interventions
-      • Statistical Methods:
-        - Describe methods used to compare groups for primary and secondary outcomes
-        - Explain methods for any additional analyses (e.g., subgroup or adjusted analyses)
-
-    - Results:
-      • Participant Flow:
-        - Provide a diagram showing participant flow through each stage of the study
-        - For each group, report the numbers randomly assigned, receiving intended treatment, and analyzed for the primary outcome
-      • Recruitment:
-        - State the dates defining the periods of recruitment and follow-up
-      • Baseline Data:
-        - Provide a table showing baseline demographic and clinical characteristics for each group
-      • Numbers Analyzed:
-        - For each group, report numbers of participants analyzed and whether analysis was by original assigned groups
-      • Outcomes and Estimation:
-        - For each primary and secondary outcome, provide results for each group, the estimated effect size, and its precision (e.g., 95% confidence interval)
-        - For binary outcomes, present both absolute and relative effect sizes
-      • Ancillary Analyses:
-        - Report results of any other analyses performed, including subgroup analyses and adjusted analyses, distinguishing pre-specified from exploratory
-      • Harms:
-        - Report all important harms or unintended effects in each group
-
-    - Discussion:
-      • Key Findings:
-        - Summarize key results with reference to study objectives
-      • Limitations:
-        - Discuss limitations of the study, addressing sources of potential bias or imprecision
-      • Interpretation:
-        - Provide a general interpretation of the results in the context of current evidence
-      • Generalizability:
-        - Discuss the external validity (generalizability) of the trial findings
-
-    - Conclusion:
-      • Summarize the main findings
-      • State their importance and implications for practice or future research
-
-    - Acknowledgements:
-      • Recognize all persons who contributed but do not meet authorship criteria
-      • Specify their contributions
-      • List all sources of funding and the role of funders in the study
-
-    - References:
-      • Cite 30-50 relevant and recent sources for original research
-      • Follow journal-specific formatting guidelines
-      • Ensure all in-text citations are included and vice versa
-
-    - Tables and Figures:
-      • Include 5-7 essential visual representations of data
-      • Provide clear, self-explanatory titles and legends
-      • Ensure all abbreviations are explained in footnotes
-
-    General Guidelines:
-    - Maximum 3,500 words (excluding abstract, references, tables, and figures)
-    - Use clear, precise language appropriate for a scientific audience, prioritizing thoroughness over brevity
-    - Provide comprehensive explanations and detailed descriptions for each section
-    - Include all relevant information, data, and context necessary for a complete understanding of the study
-    - Elaborate on complex concepts, methodologies, and findings
-    - Use specific examples, detailed explanations, and thorough justifications
-    - Aim for depth and breadth in coverage while maintaining logical flow
-    - Use topic sentences followed by supporting details to build comprehensive paragraphs
-    - Incorporate relevant background information and contextual details
-    - Provide sufficient detail in methods to allow for potential replication
-    - Use precise terminology and define specialized terms or acronyms upon first use
-    - Quantify findings whenever possible, providing exact figures, percentages, and statistical analyses
-    - Address potential questions or areas of ambiguity proactively
-    - Ensure each section is self-contained and comprehensive, while connecting logically to other sections
-    - Follow standard scientific writing conventions (e.g., IMRAD structure)
-    - Use past tense for completed actions and present tense for known facts and conclusions
-    - If in doubt about including information, err on the side of inclusion
-    - Aim for a thorough, authoritative account of the study that leaves no important questions unanswered
-    """
     else:
         return ""
 
@@ -761,128 +641,6 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             Additional Instructions:
             {additional_instructions}
             """
-        elif publication_type == "Manuscript":
-            prompt = f"""
-            You are a professional scientific medical writing assistant. Generate a comprehensive manuscript for a clinical trial, adhering to international reporting standards (e.g., CONSORT). Ensure ALL of the following sections and details are included:
-
-            1. Title: Concise, informative title reflecting the study's main focus.
-
-            2. Abstract: Structured summary (250-300 words) including:
-               - Background
-               - Methods (design, participants, interventions, main outcomes)
-               - Results (number randomized, primary and key secondary outcomes)
-               - Conclusions
-               - Trial Registration: NCT number
-
-            3. Introduction:
-               - Background: Explain the scientific context and rationale
-               - Objectives: State specific objectives and hypotheses
-
- 4. Methods:
-   - Trial Design:
-     • Describe the type of trial (e.g., parallel group, crossover, factorial) and its framework (e.g., superiority, equivalence, non-inferiority)
-     • Specify the allocation ratio
-     • Detail any important changes to methods after trial commencement (e.g., eligibility criteria), with reasons
-   - Participants:
-     • Provide detailed eligibility criteria for participants, including age range, gender, diagnosis criteria, and any specific inclusion/exclusion criteria
-     • Describe the settings and locations where the data were collected (e.g., number and type of centers)
-     • Specify the duration of the study, including recruitment period and follow-up
-   - Interventions:
-     • For each group, provide precise details of the interventions:
-       - The drug name (generic and trade), manufacturer, dose, route of administration, and regimen
-       - Any washout periods and run-in phases
-       - Procedures for monitoring participant compliance
-     • Describe any concomitant treatments allowed or prohibited
-   - Outcomes:
-     • Clearly define all primary and secondary outcome measures, including how and when they were assessed
-     • Specify any changes to trial outcomes after the trial commenced, with reasons
-     • For each outcome measure, provide details on its validity and reliability in the study population
-   - Sample Size:
-     • Explain how sample size was determined
-     • Provide details of any interim analyses and stopping guidelines, if applicable
-   - Randomization:
-     • Sequence Generation: Describe the method used to generate the random allocation sequence (e.g., computer-generated random numbers)
-     • Allocation Concealment: Detail the mechanism used to implement the random allocation sequence (e.g., sequentially numbered containers), describing any steps taken to conceal the sequence until interventions were assigned
-     • Implementation: Specify who generated the random allocation sequence, who enrolled participants, and who assigned participants to interventions
-   - Blinding:
-     • Describe who was blinded after assignment to interventions (e.g., participants, care providers, outcome assessors)
-     • If relevant, describe the similarity of interventions (e.g., appearance, taste, smell)
-     • Provide details on how the success of blinding was evaluated
-   - Statistical Methods:
-     • Describe statistical methods used to compare groups for primary and secondary outcomes, including:
-       - Handling of missing data (e.g., complete-case analysis, multiple imputation)
-       - Any adjustments for multiple comparisons
-       - Analysis population (e.g., intention-to-treat, per-protocol)
-     • Explain methods for additional analyses, such as subgroup analyses, adjusted analyses, and sensitivity analyses
-     • Specify the statistical software used
-   - Ethical Considerations:
-     • Provide details of ethical approval, including the name of the ethics committee(s) and the approval number(s)
-     • Describe the process for obtaining informed consent from participants
-     • Mention adherence to specific ethical guidelines (e.g., Declaration of Helsinki)
-     • Detail any data monitoring and safety procedures
-
-5. Results:
-   - Participant Flow:
-     • Provide a detailed flow diagram of participant progress through the study, including:
-       - Number of participants screened, eligible, consented, randomized, received intended treatment, and analyzed for the primary outcome
-       - Reasons for non-participation at each stage
-     • For each group, describe losses and exclusions after randomization, with reasons
-   - Recruitment:
-     • State the specific dates defining the periods of recruitment and follow-up
-     • Explain why the trial ended or was stopped, if applicable
-   - Baseline Data:
-     • Present a detailed table showing baseline demographic and clinical characteristics for each group
-     • Include all important prognostic variables and potential confounding factors
-   - Numbers Analyzed:
-     • For each group, report the number of participants included in each analysis
-     • Specify whether the analysis was by original assigned groups
-     • Provide reasons for any protocol deviations
-   - Outcomes and Estimation:
-     • For each primary and secondary outcome:
-       - Present results for each group
-       - Provide the estimated effect size and its precision (e.g., 95% confidence interval)
-       - For binary outcomes, present both absolute and relative effect sizes
-     • Include results of any other analyses performed, including subgroup analyses and adjusted analyses, distinguishing pre-specified from exploratory analyses
-     • Present results in a clear, organized manner, using tables and figures where appropriate
-   - Ancillary Analyses:
-     • Report the results of any other analyses performed, including:
-       - Subgroup analyses
-       - Adjusted analyses
-       - Sensitivity analyses
-     • Clearly distinguish pre-specified from exploratory analyses
-   - Harms:
-     • Provide a comprehensive summary of all important harms or unintended effects in each group
-     • Include:
-       - Absolute risks of important adverse events for each group
-       - Serious adverse events
-       - Withdrawals due to adverse events
-       - Most common adverse events (e.g., those occurring in >5% of participants)
-     • Describe any differences in adverse events between treatment groups
-     • Present data on the timing, severity, and duration of adverse events, if available
-
-Ensure that each of these sections is thoroughly addressed, providing specific details and data from the study wherever possible. Use tables, figures, and statistical analyses as appropriate to present the information clearly and comprehensively.
-            6. Discussion:
-               - Limitations: Trial limitations, addressing sources of potential bias, imprecision, and, if relevant, multiplicity of analyses
-               - Generalizability: External validity of the trial findings
-               - Interpretation: Interpretation consistent with results, balancing benefits and harms, and considering other relevant evidence
-
-            7. Other Information:
-               - Registration: Registration number and name of trial registry
-               - Protocol: Where the full trial protocol can be accessed, if available
-               - Funding: Sources of funding and other support, role of funders
-
-            Ensure that all sections are comprehensive and adhere to the guidelines provided. Use the following input to generate the manuscript:
-
-            Analysis Type: {analysis_type}
-            Maximum Length: {max_length_pub} {length_type_pub}
-            Font Sizes: {font_size_info}
-            Structure: {structure_info}
-            Extracted Data: {extracted_data}
-            Input: {user_input}
-            Additional Instructions: {additional_instructions}
-
-            Generate the complete manuscript, ensuring all required sections and details are included. Adhere to the specified maximum length and structure guidelines.
-            """
         else:
             prompt = f"""
             You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
@@ -909,35 +667,35 @@ Ensure that each of these sections is thoroughly addressed, providing specific d
                - Use clear and concise language appropriate for a scientific publication.
                - If specific information is not provided in the input, use placeholder text or general statements that would be appropriate for the section.
 
-5. **Tables and Figures:**
-   - Generate at least 3-5 detailed tables based on the study data. Each table should have:
-     • A clear, descriptive title
-     • Appropriate column headers
-     • Relevant data from the study (use placeholder data if specific numbers are not provided)
-   - Create at least 2-3 figures or charts to visually represent key findings. For each figure/chart:
-     • Provide a descriptive title
-     • Include axis labels and units
-     • Describe the data to be plotted
-   - Ensure all tables and figures are referenced and briefly described in the text
+            5. **Visualizations:**
+               - Extract key numerical data from the input and suggest up to 2 relevant charts or visualizations.
+               - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
 
-6. **Visualizations:**
-   - In addition to tables, provide data for at least 2 charts in the following JSON format:
+            ```json
+            {{
+              "type": "Chart Type (e.g., Bar Chart, Line Chart)",
+              "title": "Chart Title",
+              "x_label": "X-axis Label",
+              "y_label": "Y-axis Label",
+              "data_series": ["Numerical Series1", "Numerical Series2", ...],
+              "data": [
+                {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
+                ...
+              ]
+            }}
+            ```
 
-   ```json
-   {{
-     "type": "Chart Type (e.g., Bar Chart, Line Chart)",
-     "title": "Chart Title",
-     "x_label": "X-axis Label",
-     "y_label": "Y-axis Label",
-     "data_series": ["Numerical Series1", "Numerical Series2", ...],
-     "data": [
-       {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
-       ...
-     ]
-   }}
-   ```
+            After completing the publication and analysis content, provide a separate section titled "## Visualizations" containing all chart JSON data.
 
-   Ensure that you provide complete and realistic data for these charts based on the study information.
+            6. **Tables:**
+               - Include up to 5-7 essential tables that complement the text.
+               - For each table:
+                 - Provide a detailed title
+                 - List column headers
+                 - Use actual data from the source document if available. Here's the extracted tabular data:
+                   {extracted_data}
+                 - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
+               - Use Markdown table syntax for creating tables.
 
             7. **Acknowledgement:**
                - ALWAYS include an Acknowledgement section at the end of the document with the following text:
@@ -956,6 +714,8 @@ Ensure that each of these sections is thoroughly addressed, providing specific d
             Additional Instructions:
             {additional_instructions}
             """
+
+        client = OpenAI()
 
         response = client.chat.completions.create(
             model="gpt-4o-2024-08-06",
