@@ -1379,6 +1379,7 @@ def main():
             with st.spinner("Generating content..."):
                 try:
                     result = generate_document_cached(publication_type, analysis_type, user_input, additional_instructions)
+
                     if result:
                         if result["content"].startswith("An error occurred"):
                             st.error(result["content"])
@@ -1392,27 +1393,23 @@ def main():
                             charts = extract_chart_info(result["content"])
                             st.write(f"Number of charts extracted: {len(charts)}")  # Debug info
 
-# Extract charts from the 'Visualizations' section
-charts = extract_chart_info(result["content"])
-st.write(f"Number of charts extracted: {len(charts)}")  # Debug info
-
-if charts:
-    st.subheader("Visualizations:")
-    for i, chart_info in enumerate(charts):
-        st.write(f"Processing chart {i+1}:")  # Debug info
-        st.json(chart_info)  # Display chart data for debugging
-        if validate_chart_data(chart_info):
-            try:
-                fig = create_chart(chart_info)
-                st.pyplot(fig)
-                plt.close(fig)  # Close the figure to free up memory
-            except Exception as e:
-                st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
-                logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
-        else:
-            st.warning(f"Invalid chart data for chart {i+1}. Unable to visualize this chart.")
-else:
-    st.info("No charts were generated for this content.")
+                            if charts:
+                                st.subheader("Visualizations:")
+                                for i, chart_info in enumerate(charts):
+                                    st.write(f"Processing chart {i+1}:")  # Debug info
+                                    st.json(chart_info)  # Display chart data for debugging
+                                    if validate_chart_data(chart_info):
+                                        try:
+                                            fig = create_chart(chart_info)
+                                            st.pyplot(fig)
+                                            plt.close(fig)  # Close the figure to free up memory
+                                        except Exception as e:
+                                            st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
+                                            logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
+                                    else:
+                                        st.warning(f"Invalid chart data for chart {i+1}. Unable to visualize this chart.")
+                            else:
+                                st.info("No charts were generated for this content.")
 
                             # Assess content quality
                             quality_assessment = assess_content_quality(result["content"], publication_type, analysis_type)
@@ -1480,38 +1477,22 @@ else:
                                     document = generate_word_document(result["content"], charts, output_format=selected_format)
                                     file_extension = "docx" if selected_format == "word" else "pdf"
                                     mime_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document" if selected_format == "word" else "application/pdf"
-                                    
-                                    st.write("Document generated successfully. Attempting to create download button...")  # Debug info
-                                    
-                                    download_button = st.download_button(
+                                    st.download_button(
                                         label=f"Download as {output_format}",
                                         data=document,
                                         file_name=f"{publication_type.lower().replace(' ', '_')}_{analysis_type.lower().replace(' ', '_')}.{file_extension}",
                                         mime=mime_type
                                     )
-                                    
-                                    if download_button:
-                                        st.success("Download button created successfully!")
-                                    else:
-                                        st.warning("Download button creation failed.")
-                                    
                                 except Exception as e:
                                     st.error(f"Error generating downloadable document: {str(e)}")
-                                    logging.exception("Error in document generation:")
-
+                            
                             # Optionally, allow downloading raw content
-                            raw_download_button = st.download_button(
+                            st.download_button(
                                 label="Download Raw Content as Text",
                                 data=result["content"],
                                 file_name=f"{publication_type.lower().replace(' ', '_')}_{analysis_type.lower().replace(' ', '_')}.txt",
                                 mime="text/plain"
                             )
-                            
-                            if raw_download_button:
-                                st.success("Raw content download button created successfully!")
-                            else:
-                                st.warning("Raw content download button creation failed.")
-
                     else:
                         st.warning("No content was generated. Please try again.")
                 except Exception as e:
