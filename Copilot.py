@@ -1,4 +1,5 @@
 
+
 import os
 import re
 import json
@@ -577,7 +578,7 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
         length_type_analysis = "words" if "max_words" in analysis_type_info else "characters"
         
         font_sizes = {**pub_type_info["font_sizes"], **analysis_type_info["font_sizes"]}
-        font_size_info = ", ".join([f"{k.capitalize()}: {v}pt" for k, v in font_sizes.items())
+        font_size_info = ", ".join([f"{k.capitalize()}: {v}pt" for k, v in font_sizes.items()])
 
         structure = pub_type_info["structure"]
         structure_info = "\n".join([f"- {section}" for section in structure])
