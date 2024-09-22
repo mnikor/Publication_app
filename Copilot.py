@@ -561,77 +561,246 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
         if publication_type == "Plain Language Summary":
             prompt = f"""
-            # ... [Plain Language Summary prompt remains unchanged] ...
+            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
+
+            You are tasked with generating a comprehensive Plain Language Summary that combines the structure and guidelines of the following:
+
+            **Publication Type:** {publication_type}
+            **Analysis Type:** {analysis_type}
+
+            ### **Guidelines:**
+
+            **Target Reading Level:**
+            - Write the summary at a 6th to 8th-grade reading level.
+            - Aim for short sentences averaging 15 words or fewer.
+            - Use simple sentence structures; avoid complex or compound sentences.
+
+            **Language and Style:**
+            - Use common, everyday words instead of medical jargon.
+            - If medical terms are necessary, explain them in simple language.
+            - Write in active voice and present tense where appropriate.
+            - Engage the reader by addressing them directly when suitable.
+
+            **Structure and Content:**
+            - **Title:** Simple and clear, reflecting the main message (10-15 words).
+            - **Key Points:** 3-5 bullet points summarizing the most important takeaways.
+            - **Background:** Brief context about the condition and why the study was done (2-3 sentences).
+            - **What Was the Study About?:** Clear statement of the study's purpose (1-2 sentences).
+            - **How Was the Study Done?:** Simple description of the study methods, avoiding technical details (2-3 sentences).
+            - **What Were the Results?:** Key findings in plain language, focusing on what's most relevant to patients (3-4 sentences).
+            - **What Do the Results Mean for Patients?:** Practical implications for patient care or decision-making (2-3 sentences).
+            - **What's Next?:** Mention any study limitations or ongoing research (1-2 sentences).
+            - **Disclosures:** Include funding sources and any potential conflicts of interest.
+            - **Review Statement:** State that the summary was reviewed by a medical expert and a patient advocate (if applicable).
+
+            **Acronyms and Abbreviations:**
+            - Spell out acronyms upon first use and provide a simple explanation if necessary.
+
+            **Visual Aids:**
+            - If helpful, include simple visual elements to explain key concepts.
+            - Ensure visuals are clearly labeled and easy to understand.
+
+            **Writing Tips:**
+            - Keep paragraphs brief (3-5 sentences).
+            - Use bullet points or numbered lists where appropriate.
+            - Address common questions patients might have.
+            - Avoid unnecessary words or filler content.
+
+            **Final Review:**
+            - Before finalizing, read the summary aloud to ensure it flows naturally.
+            - Verify that the FKGL is between 6 and 8 using readability assessment tools.
+            - Make adjustments to sentence length and word choice as needed to achieve the target reading level.
+
+            Input:
+            {user_input}
+
+            Additional Instructions:
+            {additional_instructions}
             """
         elif publication_type == "Congress Abstract":
             prompt = f"""
-            # ... [Congress Abstract prompt remains unchanged] ...
+            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
+
+            You are tasked with generating a scientific congress abstract following these guidelines:
+
+            **Publication Type:** {publication_type}
+            **Analysis Type:** {analysis_type}
+
+            ### **Guidelines:**
+
+            1. **Structure:**
+               Create an abstract with the following four sections:
+               a) Background: Provide a brief introduction explaining the study's rationale.
+               b) Methods: Describe the key methodological procedures concisely.
+               c) Results: Summarize the main findings of the research.
+               d) Conclusions: State the primary conclusions drawn from the study.
+
+            2. **Title:**
+               - Craft a title that reflects the abstract's content using significant words.
+               - Do not include study results or conclusions in the title.
+               - Avoid using commercial names in the title.
+
+            3. **Content Guidelines:**
+               - Use generic names for compounds in lower case.
+               - If including commercial names in the text, use the ® symbol and place them in brackets after the generic name, e.g., "generic (Commercial®)".
+               - Provide the name(s) of the legal entity/entities responsible for the study's governance, coordination, and execution.
+               - Include the name(s) of organizations providing funding.
+
+            4. **Abbreviations:**
+               - Define all abbreviations upon first use.
+               - Spell out terms in full at first mention, followed by the abbreviation in parentheses.
+               - Take extra care to identify complex chemotherapeutic regimens clearly.
+
+            5. **Length:**
+               - Limit the abstract to 2,000 characters, excluding spaces.
+
+            6. **Additional Notes:**
+               - Ensure all information is accurate and reflects the study correctly.
+               - Maintain a professional and scientific tone throughout the abstract.
+               - Focus on presenting the most crucial and impactful aspects of the study within the limited space.
+
+            Input:
+            {user_input}
+
+            Additional Instructions:
+            {additional_instructions}
             """
+        elif publication_type == "Manuscript":
+            prompt = f"""
+            You are a professional scientific medical writing assistant. Generate a comprehensive manuscript for a clinical trial, adhering to international reporting standards (e.g., CONSORT). Ensure ALL of the following sections and details are included:
 
-    if publication_type == "Manuscript":
-        prompt = f"""
-        You are a professional scientific medical writing assistant. Generate a comprehensive manuscript for a clinical trial, adhering to international reporting standards (e.g., CONSORT). Ensure ALL of the following sections and details are included:
+            1. Title: Concise, informative title reflecting the study's main focus.
 
-        1. Title: Concise, informative title reflecting the study's main focus.
+            2. Abstract: Structured summary (250-300 words) including:
+               - Background
+               - Methods (design, participants, interventions, main outcomes)
+               - Results (number randomized, primary and key secondary outcomes)
+               - Conclusions
+               - Trial Registration: NCT number
 
-        2. Abstract: Structured summary (250-300 words) including:
-           - Background
-           - Methods (design, participants, interventions, main outcomes)
-           - Results (number randomized, primary and key secondary outcomes)
-           - Conclusions
-           - Trial Registration: NCT number
+            3. Introduction:
+               - Background: Explain the scientific context and rationale
+               - Objectives: State specific objectives and hypotheses
 
-        3. Introduction:
-           - Background: Explain the scientific context and rationale
-           - Objectives: State specific objectives and hypotheses
+            4. Methods:
+               - Trial Design: Description, important changes to methods after trial commencement
+               - Participants: Eligibility criteria, settings, locations of data collection
+               - Interventions: Precise details of interventions in each group, how and when administered
+               - Outcomes: Completely defined pre-specified primary and secondary outcome measures, including how and when assessed
+               - Sample Size: How it was determined
+               - Randomization: 
+                 • Sequence generation: Method used to generate the random allocation sequence
+                 • Allocation concealment: Method used to implement the random allocation sequence
+                 • Implementation: Who generated the allocation sequence, enrolled participants, and assigned them to interventions
+               - Blinding: Who was blinded after assignment to interventions and how
+               - Statistical Methods: 
+                 • Statistical methods used to compare groups for primary and secondary outcomes
+                 • Methods for additional analyses, such as subgroup analyses and adjusted analyses
+               - Ethical Considerations: Mention of ethical approval, informed consent, and adherence to guidelines
 
-        4. Methods:
-           - Trial Design: Description, important changes to methods after trial commencement
-           - Participants: Eligibility criteria, settings, locations of data collection
-           - Interventions: Precise details of interventions in each group, how and when administered
-           - Outcomes: Completely defined pre-specified primary and secondary outcome measures, including how and when assessed
-           - Sample Size: How it was determined
-           - Randomization: 
-             • Sequence generation: Method used to generate the random allocation sequence
-             • Allocation concealment: Method used to implement the random allocation sequence
-             • Implementation: Who generated the allocation sequence, enrolled participants, and assigned them to interventions
-           - Blinding: Who was blinded after assignment to interventions and how
-           - Statistical Methods: 
-             • Statistical methods used to compare groups for primary and secondary outcomes
-             • Methods for additional analyses, such as subgroup analyses and adjusted analyses
-           - Ethical Considerations: Mention of ethical approval, informed consent, and adherence to guidelines
+            5. Results:
+               - Participant Flow: Flow of participants through each stage (a diagram is strongly recommended)
+               - Recruitment: Dates defining the periods of recruitment and follow-up
+               - Baseline Data: Baseline demographic and clinical characteristics of each group
+               - Numbers Analyzed: Number of participants in each group included in each analysis and whether the analysis was by original assigned groups
+               - Outcomes and Estimation: For each primary and secondary outcome, results for each group, and the estimated effect size and its precision
+               - Ancillary Analyses: Results of any other analyses performed
+               - Harms: All important harms or unintended effects in each group
 
-        5. Results:
-           - Participant Flow: Flow of participants through each stage (a diagram is strongly recommended)
-           - Recruitment: Dates defining the periods of recruitment and follow-up
-           - Baseline Data: Baseline demographic and clinical characteristics of each group
-           - Numbers Analyzed: Number of participants in each group included in each analysis and whether the analysis was by original assigned groups
-           - Outcomes and Estimation: For each primary and secondary outcome, results for each group, and the estimated effect size and its precision
-           - Ancillary Analyses: Results of any other analyses performed
-           - Harms: All important harms or unintended effects in each group
+            6. Discussion:
+               - Limitations: Trial limitations, addressing sources of potential bias, imprecision, and, if relevant, multiplicity of analyses
+               - Generalizability: External validity of the trial findings
+               - Interpretation: Interpretation consistent with results, balancing benefits and harms, and considering other relevant evidence
 
-        6. Discussion:
-           - Limitations: Trial limitations, addressing sources of potential bias, imprecision, and, if relevant, multiplicity of analyses
-           - Generalizability: External validity of the trial findings
-           - Interpretation: Interpretation consistent with results, balancing benefits and harms, and considering other relevant evidence
+            7. Other Information:
+               - Registration: Registration number and name of trial registry
+               - Protocol: Where the full trial protocol can be accessed, if available
+               - Funding: Sources of funding and other support, role of funders
 
-        7. Other Information:
-           - Registration: Registration number and name of trial registry
-           - Protocol: Where the full trial protocol can be accessed, if available
-           - Funding: Sources of funding and other support, role of funders
+            Ensure that all sections are comprehensive and adhere to the guidelines provided. Use the following input to generate the manuscript:
 
-        Ensure that all sections are comprehensive and adhere to the guidelines provided. Use the following input to generate the manuscript:
+            Analysis Type: {analysis_type}
+            Maximum Length: {max_length_pub} {length_type_pub}
+            Font Sizes: {font_size_info}
+            Structure: {structure_info}
+            Extracted Data: {extracted_data}
+            Input: {user_input}
+            Additional Instructions: {additional_instructions}
 
-        Analysis Type: {analysis_type}
-        Input: {user_input}
-        Additional Instructions: {additional_instructions}
-
-        Generate the complete manuscript, ensuring all required sections and details are included.
-        """
-
+            Generate the complete manuscript, ensuring all required sections and details are included. Adhere to the specified maximum length and structure guidelines.
+            """
         else:
             prompt = f"""
-            # ... [General prompt for other publication types remains unchanged] ...
+            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
+
+            You are tasked with generating a comprehensive document that combines the structure and guidelines of the following:
+
+            **Publication Type:** {publication_type}
+            **Analysis Type:** {analysis_type}
+
+            ### **Guidelines:**
+
+            1. **Document Length:**
+               - **Publication:** Maximum {max_length_pub} {length_type_pub}.
+               - **Analysis:** Maximum {max_length_analysis} {length_type_analysis}.
+
+            2. **Font Sizes:**
+               - {font_size_info}
+
+            3. **Structure:**
+               - The document should include all sections from both the publication type and analysis type. Ensure that each section is clearly marked using Markdown syntax (e.g., ## Title, ### Methods).
+               - Provide detailed and comprehensive content for each section. Aim for at least 2-3 sentences per section, unless otherwise specified.
+
+            4. **Content Generation:**
+               - Use clear and concise language appropriate for a scientific publication.
+               - If specific information is not provided in the input, use placeholder text or general statements that would be appropriate for the section.
+
+            5. **Visualizations:**
+               - Extract key numerical data from the input and suggest up to 2 relevant charts or visualizations.
+               - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
+
+            ```json
+            {{
+              "type": "Chart Type (e.g., Bar Chart, Line Chart)",
+              "title": "Chart Title",
+              "x_label": "X-axis Label",
+              "y_label": "Y-axis Label",
+              "data_series": ["Numerical Series1", "Numerical Series2", ...],
+              "data": [
+                {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
+                ...
+              ]
+            }}
+            ```
+
+            After completing the publication and analysis content, provide a separate section titled "## Visualizations" containing all chart JSON data.
+
+            6. **Tables:**
+               - Include up to 5-7 essential tables that complement the text.
+               - For each table:
+                 - Provide a detailed title
+                 - List column headers
+                 - Use actual data from the source document if available. Here's the extracted tabular data:
+                   {extracted_data}
+                 - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
+               - Use Markdown table syntax for creating tables.
+
+            7. **Acknowledgement:**
+               - ALWAYS include an Acknowledgement section at the end of the document with the following text:
+                 "This [publication type] was created with the assistance of generative AI technology."
+
+            Adherence to Guidelines:
+            Strictly adhere to the format and guidelines for both the publication type and analysis type.
+            Ensure that ALL sections specified in the combined structure are present and contain at least minimal content.
+
+            Combined Structure:
+            {structure_info}
+
+            Input:
+            {user_input}
+
+            Additional Instructions:
+            {additional_instructions}
             """
 
         response = client.chat.completions.create(
