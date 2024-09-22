@@ -693,15 +693,18 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
             2. **Font Sizes:**
                - {font_size_info}
-
             3. **Structure:**
                - The document should include all sections from both the publication type and analysis type. Ensure that each section is clearly marked using Markdown syntax (e.g., ## Title, ### Methods).
-               - Provide detailed and comprehensive content for each section. Aim for at least 2-3 sentences per section, unless otherwise specified.
+               - **Critical Requirement**: Provide **extensive and detailed** content for each section, with special emphasis on the **Methods** and **Statistical Analysis** sections. These sections should include in-depth descriptions and cover all relevant aspects comprehensively."
+
 
             4. **Content Generation:**
-               - Use clear and concise language appropriate for a scientific publication.
+               - Use clear and precise language appropriate for a scientific publication.
                - If specific information is not provided in the input, use placeholder text or general statements that would be appropriate for the section.
-
+            5. **Important Note**:
+               - The **Methods** section should include detailed information on the study design, participant selection, interventions, data collection procedures, and statistical analyses. Do not omit any critical details.
+               - The **Statistical Analysis** section should thoroughly explain all statistical methods used, including assumptions, software, and handling of data."
+    
             5. **Visualizations:**
                - Extract key numerical data from the input and suggest up to 2 relevant charts or visualizations.
                - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
