@@ -568,114 +568,63 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
         structure = list(dict.fromkeys(pub_type_info["structure"] + analysis_type_info["structure"]))
         structure_info = "\n".join([f"- {section}" for section in structure])
 
-        extracted_data = extract_tabular_data(user_input)
+        if publication_type == "Manuscript":
+            full_content = ""
+            charts = []
 
-        if publication_type == "Plain Language Summary":
-            prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
+            for section in structure:
+                max_section_tokens = 1000  # Adjust this value as needed
+                section_prompt = f"""
+                You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
 
-            You are tasked with generating a comprehensive Plain Language Summary that combines the structure and guidelines of the following:
+                You are now working on the {section} section of a Manuscript for a {analysis_type}.
 
-            **Publication Type:** {publication_type}
-            **Analysis Type:** {analysis_type}
+                Guidelines for this section:
+                {get_section_guidelines(section, analysis_type)}
 
-            ### **Guidelines:**
+                Previous content:
+                {full_content}
 
-            **Target Reading Level:**
-            - Write the summary at a 6th to 8th-grade reading level.
-            - Aim for short sentences averaging 15 words or fewer.
-            - Use simple sentence structures; avoid complex or compound sentences.
+                Publication Type: {publication_type}
+                Analysis Type: {analysis_type}
+                Maximum Length: {max_length_pub} {length_type_pub} for publication, {max_length_analysis} {length_type_analysis} for analysis
+                Font Sizes: {font_size_info}
 
-            **Language and Style:**
-            - Use common, everyday words instead of medical jargon.
-            - If medical terms are necessary, explain them in simple language.
-            - Write in active voice and present tense where appropriate.
-            - Engage the reader by addressing them directly when suitable.
+                Input:
+                {user_input}
 
-            **Structure and Content:**
-            - **Title:** Simple and clear, reflecting the main message (10-15 words).
-            - **Key Points:** 3-5 bullet points summarizing the most important takeaways.
-            - **Background:** Brief context about the condition and why the study was done (2-3 sentences).
-            - **What Was the Study About?:** Clear statement of the study's purpose (1-2 sentences).
-            - **How Was the Study Done?:** Simple description of the study methods, avoiding technical details (2-3 sentences).
-            - **What Were the Results?:** Key findings in plain language, focusing on what's most relevant to patients (3-4 sentences).
-            - **What Do the Results Mean for Patients?:** Practical implications for patient care or decision-making (2-3 sentences).
-            - **What's Next?:** Mention any study limitations or ongoing research (1-2 sentences).
-            - **Disclosures:** Include funding sources and any potential conflicts of interest.
-            - **Review Statement:** State that the summary was reviewed by a medical expert and a patient advocate (if applicable).
+                Additional Instructions:
+                {additional_instructions}
 
-            **Acronyms and Abbreviations:**
-            - Spell out acronyms upon first use and provide a simple explanation if necessary.
+                Please generate a concise and focused {section} section for this Manuscript. Do not include the section title in your response. Ensure that it follows scientific writing standards and provides all important details relevant to this section without unnecessary repetition or verbosity.
+                """
 
-            **Visual Aids:**
-            - If helpful, include simple visual elements to explain key concepts.
-            - Ensure visuals are clearly labeled and easy to understand.
+                response = client.chat.completions.create(
+                    model="gpt-4o-2024-08-06",
+                    messages=[
+                        {"role": "system", "content": "You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types."},
+                        {"role": "user", "content": section_prompt}
+                    ],
+                    max_tokens=max_section_tokens,
+                    temperature=0
+                )
 
-            **Writing Tips:**
-            - Keep paragraphs brief (3-5 sentences).
-            - Use bullet points or numbered lists where appropriate.
-            - Address common questions patients might have.
-            - Avoid unnecessary words or filler content.
+                section_content = response.choices[0].message.content.strip()
+                full_content += f"\n\n## {section}\n\n{section_content}"
 
-            **Final Review:**
-            - Before finalizing, read the summary aloud to ensure it flows naturally.
-            - Verify that the FKGL is between 6 and 8 using readability assessment tools.
-            - Make adjustments to sentence length and word choice as needed to achieve the target reading level.
-
-            Input:
-            {user_input}
-
-            Additional Instructions:
-            {additional_instructions}
-            """
-        elif publication_type == "Congress Abstract":
-            prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
-
-            You are tasked with generating a scientific congress abstract following these guidelines:
-
-            **Publication Type:** {publication_type}
-            **Analysis Type:** {analysis_type}
-
-            ### **Guidelines:**
-
-            1. **Structure:**
-               Create an abstract with the following four sections:
-               a) Background: Provide a brief introduction explaining the study's rationale.
-               b) Methods: Describe the key methodological procedures concisely.
-               c) Results: Summarize the main findings of the research.
-               d) Conclusions: State the primary conclusions drawn from the study.
-
-            2. **Title:**
-               - Craft a title that reflects the abstract's content using significant words.
-               - Do not include study results or conclusions in the title.
-               - Avoid using commercial names in the title.
-
-            3. **Content Guidelines:**
-               - Use generic names for compounds in lower case.
-               - If including commercial names in the text, use the ® symbol and place them in brackets after the generic name, e.g., "generic (Commercial®)".
-               - Provide the name(s) of the legal entity/entities responsible for the study's governance, coordination, and execution.
-               - Include the name(s) of organizations providing funding.
-
-            4. **Abbreviations:**
-               - Define all abbreviations upon first use.
-               - Spell out terms in full at first mention, followed by the abbreviation in parentheses.
-               - Take extra care to identify complex chemotherapeutic regimens clearly.
-
-            5. **Length:**
-               - Limit the abstract to 2,000 characters, excluding spaces.
-
-            6. **Additional Notes:**
-               - Ensure all information is accurate and reflects the study correctly.
-               - Maintain a professional and scientific tone throughout the abstract.
-               - Focus on presenting the most crucial and impactful aspects of the study within the limited space.
-
-            Input:
-            {user_input}
-
-            Additional Instructions:
-            {additional_instructions}
-            """
+                # Extract chart information if present
+                if section == "Tables and Figures":
+                    section_charts = extract_chart_info(section_content)
+                    charts.extend(section_charts)
+            
+            # Add a separate Visualizations section at the end
+            if charts:
+                full_content += "\n\n## Visualizations\n\n"
+                for chart in charts:
+                    full_content += f"### {chart['title']}\n\n"
+                    full_content += f"```json\n{json.dumps(chart, indent=2)}\n```\n\n"
+            
+            return {"content": full_content, "charts": charts}
         else:
             prompt = f"""
             You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
@@ -696,7 +645,7 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
             3. **Structure:**
                - The document should include all sections from both the publication type and analysis type. Ensure that each section is clearly marked using Markdown syntax (e.g., ## Title, ### Methods).
-               - Provide detailed and comprehensive content for each section. Aim for at least 2-3 sentences per section, unless otherwise specified.
+               - Provide detailed and comprehensive content for each section.
 
             4. **Content Generation:**
                - Use clear and concise language appropriate for a scientific publication.
@@ -720,15 +669,12 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             }}
             ```
 
-            After completing the publication and analysis content, provide a separate section titled "## Visualizations" containing all chart JSON data.
-
             6. **Tables:**
                - Include up to 5-7 essential tables that complement the text.
                - For each table:
                  - Provide a detailed title
                  - List column headers
-                 - Use actual data from the source document if available. Here's the extracted tabular data:
-                   {extracted_data}
+                 - Use actual data from the source document if available
                  - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
                - Use Markdown table syntax for creating tables.
 
@@ -736,11 +682,7 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
                - ALWAYS include an Acknowledgement section at the end of the document with the following text:
                  "This [publication type] was created with the assistance of generative AI technology."
 
-            Adherence to Guidelines:
-            Strictly adhere to the format and guidelines for both the publication type and analysis type.
-            Ensure that ALL sections specified in the combined structure are present and contain at least minimal content.
-
-            Combined Structure:
+            Structure:
             {structure_info}
 
             Input:
@@ -750,78 +692,144 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             {additional_instructions}
             """
 
-        client = OpenAI()
+            response = client.chat.completions.create(
+                model="gpt-4o-2024-08-06",
+                messages=[
+                    {"role": "system", "content": "You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=16000,
+                temperature=0
+            )
 
-        response = client.chat.completions.create(
-            model="gpt-4o-2024-08-06",
-            messages=[
-                {"role": "system", "content": "You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=16000,
-            temperature=0  # Ensures consistency
-        )
+            full_content = response.choices[0].message.content
 
-        full_content = response.choices[0].message.content
-
-        # Extract chart information
-        charts = extract_chart_info(full_content)
-        
-        logging.debug(f"Extracted charts: {charts}")
-
-        return {"content": full_content, "charts": charts}
+            # Extract chart information
+            charts = extract_chart_info(full_content)
+            
+            return {"content": full_content, "charts": charts}
 
     except Exception as e:
         logging.error(f"Error in generate_document: {str(e)}")
         return {"content": f"An error occurred while generating the document: {str(e)}", "charts": []}
 
+def get_section_guidelines(section: str, analysis_type: str) -> str:
+    """
+    Returns specific guidelines for each section of the Manuscript.
+    """
+    guidelines = {
+        "Title": "Create a concise, informative title that accurately reflects the content of the manuscript. Avoid abbreviations and jargon.",
+        "Authors": "List all authors who contributed significantly to the work. Use full names and affiliations.",
+        "Affiliations": "Provide complete institutional affiliations for all authors, including department, institution, city, and country.",
+        "Abstract": f"Write a structured abstract (250-300 words) summarizing the background, methods, results, and conclusions of the {analysis_type}. Include key numerical results and statistical significance where appropriate.",
+        "Introduction": f"Provide background information relevant to the {analysis_type}. State the rationale for the study, gaps in current knowledge, and specific objectives or hypotheses. Typically 3-5 paragraphs.",
+        "Methods": f"""
+        Describe in detail:
+        - Study design and setting
+        - Participant selection and characteristics
+        - Interventions or exposures (if applicable)
+        - Primary and secondary outcomes
+        - Sample size calculation
+        - Randomization and blinding procedures (if applicable)
+        - Data collection methods
+        - Statistical analysis methods specific to the {analysis_type}
+        Use subheadings as appropriate.
+        """,
+        "Results": f"""
+        Present findings in a logical sequence, using subheadings if needed. Include:
+        - Participant flow and recruitment
+        - Baseline demographic and clinical characteristics
+        - Primary outcome results with effect sizes and precision (e.g., 95% confidence interval)
+        - Secondary outcome results
+        - Adverse events or side effects (if applicable)
+        - Any additional analyses specific to the {analysis_type}
+        Use tables and figures to summarize complex data.
+        """,
+        "Discussion": f"""
+        Interpret your results in the context of existing literature. Include:
+        - Summary of key findings
+        - Comparison with relevant studies
+        - Strengths and limitations of the study
+        - Implications of the findings for clinical practice or future research
+        - Unanswered questions and future directions
+        Typically 4-6 paragraphs.
+        """,
+        "Conclusion": "Provide a brief (1-2 paragraphs) conclusion that summarizes the main findings and their implications. Avoid introducing new information.",
+        "Acknowledgements": "Acknowledge any individuals or organizations that contributed to the work but do not meet authorship criteria. Include funding sources and any potential conflicts of interest.",
+        "References": "List all sources cited in the text using the appropriate citation style (e.g., Vancouver, APA). Ensure all references are current and relevant.",
+        "Tables and Figures": f"""
+        Create clear, self-explanatory tables and figures that complement the text. Include:
+        - Descriptive titles
+        - Clear labels for all axes, columns, and rows
+        - Explanatory footnotes if needed
+        - Appropriate statistical measures (e.g., p-values, confidence intervals)
+        Suggest up to 5 relevant visualizations based on the {analysis_type} data.
+        """
+    }
+    return guidelines.get(section, "Provide relevant content for this section.")
+
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
-    """
-    Extracts chart information from the '## Visualizations' section of the generated content.
-
-    Parameters:
-    - content (str): The full generated content containing chart JSON.
-
-    Returns:
-    - List[Dict[str, Any]]: A list of chart information dictionaries.
-    """
     charts = []
-    # Locate the '## Visualizations' section
-    visualizations_match = re.search(r'##\s+Visualizations\s*([\s\S]*)', content, re.IGNORECASE)
-    if visualizations_match:
-        visualizations_content = visualizations_match.group(1)
-        logging.debug(f"Found 'Visualizations' section:\n{visualizations_content}")
-        # Find all JSON blocks within the 'Visualizations' section
-        json_blocks = re.findall(r'```json\s*([\s\S]*?)```', visualizations_content, re.DOTALL | re.IGNORECASE)
-        logging.debug(f"Found {len(json_blocks)} JSON blocks in 'Visualizations' section.")
-        for idx, json_str in enumerate(json_blocks, 1):
-            try:
-                json_str = json_str.strip()
-                chart_info = json.loads(json_str)
-                # Validate required fields
-                if not validate_chart_data(chart_info):
-                    logging.warning(f"Chart {idx} is missing required fields or has invalid data.")
-                    continue
+    # Look for JSON-formatted chart data
+    json_blocks = re.findall(r'```json\s*([\s\S]*?)```', content, re.DOTALL | re.IGNORECASE)
+    
+    for json_str in json_blocks:
+        try:
+            chart_info = json.loads(json_str.strip())
+            if validate_chart_data(chart_info):
                 charts.append(chart_info)
-                logging.debug(f"Chart {idx} extracted successfully.")
-            except json.JSONDecodeError as e:
-                logging.error(f"JSON decoding error in chart {idx}: {e} in block: {json_str}")
-                continue
-    else:
-        logging.warning("No 'Visualizations' section found in the generated content.")
+                logging.info(f"Valid chart data found: {chart_info['title']}")
+            else:
+                logging.warning(f"Invalid chart data: {json_str}")
+        except json.JSONDecodeError:
+            logging.error(f"JSON decoding error in chart: {json_str}")
+
+    # If no JSON data found, look for text descriptions of charts
+    if not charts:
+        chart_descriptions = re.findall(r'(Figure \d+:.*?)(?=Figure \d+:|$)', content, re.DOTALL)
+        for desc in chart_descriptions:
+            lines = desc.strip().split('\n')
+            title = lines[0].strip()
+            description = ' '.join(lines[1:]).strip()
+            charts.append({
+                "type": "Text Description",
+                "title": title,
+                "description": description
+            })
+            logging.info(f"Text description chart found: {title}")
+
+    # If still no charts found, log the entire content for debugging
+    if not charts:
+        logging.warning("No charts found. Content:")
+        logging.warning(content)
+
     return charts
 
 def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
-    required_fields = {"type", "title", "x_label", "y_label", "data_series", "data"}
+    if not isinstance(chart_info, dict):
+        logging.error(f"Chart info is not a dictionary: {chart_info}")
+        return False
+
+    required_fields = {"type", "title"}
     if not required_fields.issubset(chart_info.keys()):
         logging.error(f"Chart info missing required fields: {chart_info}")
         return False
-    
+
+    # For Text Description type, only title and description are required
+    if chart_info['type'] == "Text Description":
+        return "description" in chart_info
+
+    # For other chart types, check for additional required fields
+    additional_fields = {"x_label", "y_label", "data_series", "data"}
+    if not additional_fields.issubset(chart_info.keys()):
+        logging.error(f"Chart info missing additional required fields for non-text charts: {chart_info}")
+        return False
+
     # Validate data_series is a list of strings
     if not isinstance(chart_info['data_series'], list) or not all(isinstance(series, str) for series in chart_info['data_series']):
         logging.error("data_series must be a list of strings.")
         return False
-    
+
     # Validate data is a non-empty list of dictionaries
     if not isinstance(chart_info['data'], list) or not chart_info['data']:
         logging.error("Chart data is not a non-empty list.")
@@ -830,52 +838,19 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
         if not isinstance(entry, dict):
             logging.error(f"Data entry is not a dictionary: {entry}")
             return False
-    
-    # Additional checks based on chart type
-    chart_type = chart_info['type'].lower()
-    if chart_type == "pie chart" and len(chart_info['data_series']) != 1:
-        logging.error("Pie chart requires exactly one data series.")
-        return False
-    if chart_type in ["bar chart", "line chart", "scatter plot", "histogram"] and len(chart_info['data_series']) < 1:
-        logging.error(f"{chart_type.capitalize()} requires at least one data series.")
-        return False
-    if chart_type == "kaplan-meier curve" and len(chart_info['data_series']) == 2:
-        # For Kaplan-Meier, typically need time and event data
-        pass
-    if chart_type == "forest plot" and len(chart_info['data_series']) >= 3:
-        # Forest plots require effect sizes, confidence intervals, etc.
-        pass
-    
-    # Check for missing or non-numeric data in data_series
-    for series in chart_info['data_series']:
-        for entry in chart_info['data']:
-            if series not in entry or not isinstance(entry[series], (int, float, str)):
-                logging.error(f"Data series '{series}' has missing or invalid data in entry: {entry}")
-                return False
-    
-    # Additional checks for new chart types
-    if chart_type == "heatmap" and len(chart_info['data_series']) < 3:
-        logging.error("Heatmap requires at least three data series: x, y, and value.")
-        return False
-    if chart_type == "waterfall" and len(chart_info['data_series']) < 2:
-        logging.error("Waterfall chart requires at least two data series: categories and values.")
-        return False
-    if chart_type in ["box plot", "violin plot"] and len(chart_info['data_series']) < 2:
-        logging.error(f"{chart_type.capitalize()} requires at least two data series: categories and values.")
-        return False
 
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
-    """
-    Creates a Matplotlib figure based on the provided chart information.
+    fig, ax = plt.subplots(figsize=(10, 6))
 
-    Parameters:
-    - chart_info (Dict[str, Any]): Dictionary containing chart specifications.
-
-    Returns:
-    - plt.Figure: The created Matplotlib figure.
-    """
+    if chart_info.get("type") == "Text Description":
+        ax.text(0.5, 0.5, chart_info.get("description", "No description available"), 
+                wrap=True, horizontalalignment='center', verticalalignment='center')
+        ax.axis('off')
+        plt.title(chart_info.get("title", "Untitled Chart"))
+        return fig
+    
     chart_type = chart_info.get('type', '').lower()
     title = chart_info.get('title', '')
     x_label = chart_info.get('x_label', '')
@@ -884,7 +859,11 @@ def create_chart(chart_info: Dict[str, Any]):
     data = chart_info.get('data', [])
 
     if not data:
-        raise ValueError("No data available for chart creation")
+        ax.text(0.5, 0.5, "No data available for chart creation", 
+                wrap=True, horizontalalignment='center', verticalalignment='center')
+        ax.axis('off')
+        plt.title(title)
+        return fig
 
     df = pd.DataFrame(data)
     # Convert numeric columns to numbers, if possible
@@ -892,117 +871,39 @@ def create_chart(chart_info: Dict[str, Any]):
         if col != x_label and df[col].dtype == object:
             df[col] = pd.to_numeric(df[col].astype(str).str.replace('%', ''), errors='coerce')
 
-    fig, ax = plt.subplots(figsize=(10, 6))  # Adjust figure size
-
     try:
         if 'bar' in chart_type:
-            if x_label in df.columns:
-                bars = df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
-                for bar in bars.containers:
-                    ax.bar_label(bar, label_type='edge')
-            else:
-                raise ValueError(f"X-axis label '{x_label}' not found in data columns.")
+            df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
+            for container in ax.containers:
+                ax.bar_label(container, label_type='edge')
         elif 'line' in chart_type:
-            if x_label in df.columns:
-                lines = df.plot(kind='line', x=x_label, y=data_series, ax=ax, marker='o')
-                for line in lines.get_lines():
-                    for x, y in zip(line.get_xdata(), line.get_ydata()):
-                        ax.text(x, y, f'{y:.2f}', ha='center', va='bottom')
-            else:
-                raise ValueError(f"X-axis label '{x_label}' not found in data columns.")
+            df.plot(kind='line', x=x_label, y=data_series, ax=ax, marker='o')
+            for line in ax.lines:
+                for x, y in zip(line.get_xdata(), line.get_ydata()):
+                    ax.annotate(f'{y:.2f}', (x, y), xytext=(0, 5), textcoords='offset points', ha='center')
         elif 'pie' in chart_type:
             if len(data_series) == 1:
-                wedges, texts, autotexts = ax.pie(df[data_series[0]], labels=df[x_label], autopct='%1.1f%%', startangle=90)
-                for autotext in autotexts:
-                    autotext.set_color('white')
-                ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+                df.plot(kind='pie', y=data_series[0], labels=df[x_label], ax=ax, autopct='%1.1f%%')
             else:
                 raise ValueError("Pie chart requires exactly one data series.")
         elif 'scatter' in chart_type:
-            if len(data_series) == 2:
-                scatter = df.plot(kind='scatter', x=data_series[0], y=data_series[1], ax=ax)
-                for i, txt in enumerate(df[x_label]):
-                    ax.annotate(txt, (df[data_series[0]][i], df[data_series[1]][i]))
-            else:
-                raise ValueError("Scatter plot requires exactly two data series.")
-        elif 'histogram' in chart_type:
-            if len(data_series) == 1:
-                hist = df[data_series[0]].plot(kind='hist', ax=ax, bins=10, edgecolor='black')
-                for patch in hist.patches:
-                    ax.text(patch.get_x() + patch.get_width() / 2, patch.get_height(), f'{patch.get_height()}', ha='center', va='bottom')
-            else:
-                raise ValueError("Histogram requires exactly one data series.")
-        elif 'kaplan-meier curve' in chart_type:
-            if len(data_series) >= 2:
-                kmf = KaplanMeierFitter()
-                # Assume first series is duration and second is event observed
-                duration_col = data_series[0]
-                event_col = data_series[1]
-                if len(data_series) > 2:
-                    groups = data_series[2]
-                    for group in df[groups].unique():
-                        mask = df[groups] == group
-                        kmf.fit(df[duration_col][mask], event_observed=df[event_col][mask], label=str(group))
-                        kmf.plot_survival_function(ax=ax)
-                else:
-                    kmf.fit(df[duration_col], event_observed=df[event_col], label="All")
-                    kmf.plot_survival_function(ax=ax)
-                ax.set_xlabel(x_label, fontsize=12)
-                ax.set_ylabel(y_label, fontsize=12)
-            else:
-                raise ValueError("Kaplan-Meier curve requires at least two data series: duration and event observed.")
-        elif 'heatmap' in chart_type:
-            if len(data_series) >= 2:
-                pivot_df = df.pivot(index=data_series[0], columns=data_series[1], values=data_series[2])
-                sns.heatmap(pivot_df, annot=True, cmap='YlOrRd', ax=ax)
-                ax.set_xlabel(data_series[1], fontsize=12)
-                ax.set_ylabel(data_series[0], fontsize=12)
-            else:
-                raise ValueError("Heatmap requires at least three data series: x, y, and value.")
-        elif 'waterfall' in chart_type:
-            if len(data_series) >= 2:
-                df = df.sort_values(by=data_series[1], ascending=False)
-                df['cumulative'] = df[data_series[1]].cumsum()
-                df['base'] = df['cumulative'] - df[data_series[1]]
-                
-                colors = ['g' if x >= 0 else 'r' for x in df[data_series[1]]]
-                ax.bar(df[data_series[0]], df[data_series[1]], bottom=df['base'], color=colors)
-                
-                for i, (index, row) in enumerate(df.iterrows()):
-                    ax.text(i, row['cumulative'], f'{row[data_series[1]]:.1f}', 
-                            ha='center', va='bottom' if row[data_series[1]] >= 0 else 'top')
-                
-                ax.set_xlabel(data_series[0], fontsize=12)
-                ax.set_ylabel(data_series[1], fontsize=12)
-                ax.set_xticklabels(df[data_series[0]], rotation=45, ha='right')
-            else:
-                raise ValueError("Waterfall chart requires at least two data series: categories and values.")
-        elif 'box plot' in chart_type:
-            if len(data_series) >= 2:
-                sns.boxplot(x=data_series[0], y=data_series[1], data=df, ax=ax)
-                ax.set_xlabel(data_series[0], fontsize=12)
-                ax.set_ylabel(data_series[1], fontsize=12)
-            else:
-                raise ValueError("Box plot requires at least two data series: categories and values.")
-        elif 'violin plot' in chart_type:
-            if len(data_series) >= 2:
-                sns.violinplot(x=data_series[0], y=data_series[1], data=df, ax=ax)
-                ax.set_xlabel(data_series[0], fontsize=12)
-                ax.set_ylabel(data_series[1], fontsize=12)
-            else:
-                raise ValueError("Violin plot requires at least two data series: categories and values.")
+            df.plot(kind='scatter', x=data_series[0], y=data_series[1], ax=ax)
+        elif 'box' in chart_type:
+            df.boxplot(column=data_series, ax=ax)
         else:
             raise ValueError(f"Unsupported chart type: {chart_type}")
 
-        ax.set_title(title, fontsize=14)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        ax.set_title(title)
         plt.tight_layout()
-
-        return fig
-
     except Exception as e:
-        plt.close(fig)
-        logging.error(f"Error creating chart '{title}': {str(e)}")
-        raise
+        logging.error(f"Error creating chart: {str(e)}")
+        ax.text(0.5, 0.5, f"Error creating chart: {str(e)}", 
+                wrap=True, horizontalalignment='center', verticalalignment='center')
+        ax.axis('off')
+
+    return fig
 
 def extract_text_from_pdf(file):
     pdf_reader = PyPDF2.PdfReader(file)
@@ -1153,12 +1054,23 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
         if charts:
             doc.add_heading("Visualizations", level=2)
             for chart in charts:
-                # Create chart using Matplotlib
-                fig = create_chart(chart)
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
-                    fig.savefig(tmpfile.name, format='png', bbox_inches='tight')
-                    doc.add_picture(tmpfile.name, width=Inches(6))
-                os.unlink(tmpfile.name)
+                try:
+                    # Create chart using Matplotlib
+                    fig = create_chart(chart)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+                        fig.savefig(tmpfile.name, format='png', bbox_inches='tight')
+                        doc.add_picture(tmpfile.name, width=Inches(6))
+                    os.unlink(tmpfile.name)
+                    plt.close(fig)  # Close the figure to free up memory
+                    
+                    # Add chart title and description
+                    doc.add_paragraph(chart.get("title", "Untitled Chart"), style='Heading3')
+                    if chart.get("type") == "Text Description":
+                        doc.add_paragraph(chart.get("description", "No description available"))
+                except Exception as e:
+                    logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
+                    doc.add_paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}")
+                    doc.add_paragraph(f"Error details: {str(e)}")
         # Save to BytesIO
         file_stream = BytesIO()
         doc.save(file_stream)
@@ -1230,40 +1142,49 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
             elements.append(Paragraph("Visualizations", styles['Heading2']))
             elements.append(Spacer(1, 12))
             for chart in charts:
-                fig = create_chart(chart)
-                img_buffer = BytesIO()
-                fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
-                img_buffer.seek(0)
-                img = Image(img_buffer)
-                
-                # Calculate aspect ratio and adjust image size
-                fig_width, fig_height = fig.get_size_inches()
-                aspect_ratio = fig_height / fig_width
-                
-                img_width = 6 * inch  # Set a maximum width
-                img_height = img_width * aspect_ratio
-                
-                # If the height is too large, adjust both width and height
-                if img_height > 8 * inch:
-                    img_height = 8 * inch
-                    img_width = img_height / aspect_ratio
-                
-                img.drawHeight = img_height
-                img.drawWidth = img_width
-                img.hAlign = 'CENTER'
-                
-                # Add more space before the chart
-                elements.append(Spacer(1, 24))
-                elements.append(img)
-                # Add more space after the chart
-                elements.append(Spacer(1, 24))
-                
-                # Add chart title
-                if 'title' in chart:
-                    elements.append(Paragraph(chart['title'], styles['Heading4']))
-                    elements.append(Spacer(1, 12))
-                
-                plt.close(fig)
+                try:
+                    if chart.get('type') == 'Text Description':
+                        elements.append(Paragraph(f"{chart['title']}\n{chart['description']}", styles['Justify']))
+                        elements.append(Spacer(1, 6))
+                    else:
+                        fig = create_chart(chart)
+                        img_buffer = BytesIO()
+                        fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
+                        img_buffer.seek(0)
+                        img = Image(img_buffer)
+                        
+                        # Calculate aspect ratio and adjust image size
+                        fig_width, fig_height = fig.get_size_inches()
+                        aspect_ratio = fig_height / fig_width
+                        
+                        img_width = 6 * inch  # Set a maximum width
+                        img_height = img_width * aspect_ratio
+                        
+                        # If the height is too large, adjust both width and height
+                        if img_height > 8 * inch:
+                            img_height = 8 * inch
+                            img_width = img_height / aspect_ratio
+                        
+                        img.drawHeight = img_height
+                        img.drawWidth = img_width
+                        img.hAlign = 'CENTER'
+                        
+                        # Add more space before the chart
+                        elements.append(Spacer(1, 24))
+                        elements.append(img)
+                        # Add more space after the chart
+                        elements.append(Spacer(1, 24))
+                        
+                        # Add chart title
+                        if 'title' in chart:
+                            elements.append(Paragraph(chart['title'], styles['Heading4']))
+                            elements.append(Spacer(1, 12))
+                        
+                        plt.close(fig)
+                except Exception as e:
+                    logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
+                    elements.append(Paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}", styles['Justify']))
+                    elements.append(Spacer(1, 6))
 
         doc.build(elements)
         buffer.seek(0)
