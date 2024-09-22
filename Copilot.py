@@ -846,17 +846,18 @@ def create_chart(chart_info: Dict[str, Any]):
     """
     Create a chart if numeric data is available, otherwise skip.
     """
+    chart_type = chart_info.get('type', 'Text Description').lower()
     title = chart_info.get('title', 'Untitled Chart')
     description = chart_info.get('description', '')
 
     try:
-        # Check if this is a text description and try to extract numeric data
-        if chart_info.get("type") == "Text Description":
+        # Handle text descriptions
+        if chart_type == "text description":
             # Extract numeric data from the description
             extracted_data = extract_numeric_from_description(description)
             
             if extracted_data is not None:
-                # Create a bar chart as an example
+                # Create a bar chart as an example (can be adjusted based on your needs)
                 fig, ax = plt.subplots(figsize=(8, 6))
                 extracted_data.plot(kind='bar', x='Week', y='Patients', ax=ax)
                 ax.set_title(title)
@@ -875,7 +876,6 @@ def create_chart(chart_info: Dict[str, Any]):
 
             fig, ax = plt.subplots(figsize=(10, 6))
 
-            chart_type = chart_info.get('type', '').lower()
             x_label = chart_info.get('x_label', '') or df.columns[0]
             y_label = chart_info.get('y_label', '') or df.columns[1]
             data_series = chart_info.get('data_series', []) or df.columns[1:]
