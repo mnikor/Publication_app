@@ -743,14 +743,28 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
     charts = []
-    json_blocks = re.findall(r'JSON:\s*(\{[\s\S]*?\})', content)
+    
+    # Look for the Visualizations section
+    visualizations_match = re.search(r'##\s+Visualizations\s*([\s\S]*)', content, re.IGNORECASE)
+    if visualizations_match:
+        visualizations_content = visualizations_match.group(1)
+        json_blocks = re.findall(r'```json\s*([\s\S]*?)```', visualizations_content, re.DOTALL | re.IGNORECASE)
+    else:
+        # If no Visualizations section, look for JSON blocks in the entire content
+        json_blocks = re.findall(r'JSON:\s*(\{[\s\S]*?\})', content)
+    
     for json_str in json_blocks:
         try:
             chart_info = json.loads(json_str)
-            if isinstance(chart_info, dict) and 'type' in chart_info and 'data' in chart_info:
-                charts.append(chart_info)
+            if isinstance(chart_info, dict) and 'type' in chart_info:
+                if 'data' in chart_info:
+                    charts.append(chart_info)
+                else:
+                    # For backwards compatibility with the old format
+                    charts.append({"type": chart_info["type"], "data": chart_info})
         except json.JSONDecodeError as e:
             logging.error(f"JSON decoding error: {e} in block: {json_str}")
+    
     return charts
 
 def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
@@ -810,13 +824,12 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
 
 def create_chart(chart_info: Dict[str, Any]):
     chart_type = chart_info.get('type', '').lower()
-    data = chart_info.get('data', {})
+    data = chart_info.get('data', chart_info)  # Use 'data' if present, otherwise use the whole chart_info
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
     try:
         if chart_type == 'flowchart':
-            # For flowcharts, we'll just display the node labels
             nodes = data.get('nodes', [])
             for i, node in enumerate(nodes):
                 ax.text(0.5, 1 - (i+1)/(len(nodes)+1), node['label'], ha='center', va='center', bbox=dict(facecolor='white', edgecolor='black'))
@@ -831,9 +844,18 @@ def create_chart(chart_info: Dict[str, Any]):
             table.auto_set_font_size(False)
             table.set_fontsize(9)
             table.scale(1, 1.5)
+        elif chart_type == 'line_chart':
+            x = data.get('x', [])
+            y = data.get('y', {})
+            for series_name, series_data in y.items():
+                ax.plot(x, series_data, label=series_name)
+            ax.set_xlabel(data.get('x_label', 'X-axis'))
+            ax.set_ylabel(data.get('y_label', 'Y-axis'))
+            ax.legend()
         else:
             ax.text(0.5, 0.5, f"Unsupported chart type: {chart_type}", ha='center', va='center')
 
+        plt.title(data.get('title', ''))
         plt.tight_layout()
         return fig
 
