@@ -770,67 +770,37 @@ def get_section_guidelines(section: str, analysis_type: str) -> str:
 
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
     charts = []
-    # Look for JSON-formatted chart data
-    json_blocks = re.findall(r'```json\s*([\s\S]*?)```', content, re.DOTALL | re.IGNORECASE)
-    
-    for json_str in json_blocks:
-        try:
-            chart_info = json.loads(json_str.strip())
-            if validate_chart_data(chart_info):
-                charts.append(chart_info)
-                logging.info(f"Valid chart data found: {chart_info['title']}")
-            else:
-                logging.warning(f"Invalid chart data: {json_str}")
-        except json.JSONDecodeError:
-            logging.error(f"JSON decoding error in chart: {json_str}")
-
-    # If no JSON data found, look for text descriptions of charts
-    if not charts:
-        chart_descriptions = re.findall(r'(Figure \d+:.*?)(?=Figure \d+:|$)', content, re.DOTALL)
-        for desc in chart_descriptions:
-            lines = desc.strip().split('\n')
-            title = lines[0].strip()
-            description = ' '.join(lines[1:]).strip()
-            charts.append({
-                "type": "Text Description",
-                "title": title,
-                "description": description
-            })
-            logging.info(f"Text description chart found: {title}")
-
-    # If still no charts found, log the entire content for debugging
-    if not charts:
-        logging.warning("No charts found. Content:")
-        logging.warning(content)
-
+    visualizations_match = re.search(r'##\s+Visualizations\s*([\s\S]*)', content, re.IGNORECASE)
+    if visualizations_match:
+        visualizations_content = visualizations_match.group(1)
+        logging.debug(f"Found 'Visualizations' section:\n{visualizations_content}")
+        json_blocks = re.findall(r'```json\s*([\s\S]*?)```', visualizations_content, re.DOTALL | re.IGNORECASE)
+        logging.debug(f"Found {len(json_blocks)} JSON blocks in 'Visualizations' section.")
+        for idx, json_str in enumerate(json_blocks, 1):
+            try:
+                json_str = json_str.strip()
+                chart_info = json.loads(json_str)
+                if validate_chart_data(chart_info):
+                    charts.append(chart_info)
+                    logging.debug(f"Chart {idx} extracted successfully.")
+                else:
+                    logging.warning(f"Chart {idx} is missing required fields or has invalid data.")
+            except json.JSONDecodeError as e:
+                logging.error(f"JSON decoding error in chart {idx}: {e} in block: {json_str}")
+    else:
+        logging.warning("No 'Visualizations' section found in the generated content.")
     return charts
 
 def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
-    if not isinstance(chart_info, dict):
-        logging.error(f"Chart info is not a dictionary: {chart_info}")
-        return False
-
-    required_fields = {"type", "title"}
+    required_fields = {"type", "title", "x_label", "y_label", "data_series", "data"}
     if not required_fields.issubset(chart_info.keys()):
         logging.error(f"Chart info missing required fields: {chart_info}")
         return False
-
-    # For Text Description type, only title and description are required
-    if chart_info['type'] == "Text Description":
-        return "description" in chart_info
-
-    # For other chart types, check for additional required fields
-    additional_fields = {"x_label", "y_label", "data_series", "data"}
-    if not additional_fields.issubset(chart_info.keys()):
-        logging.error(f"Chart info missing additional required fields for non-text charts: {chart_info}")
-        return False
-
-    # Validate data_series is a list of strings
+    
     if not isinstance(chart_info['data_series'], list) or not all(isinstance(series, str) for series in chart_info['data_series']):
         logging.error("data_series must be a list of strings.")
         return False
-
-    # Validate data is a non-empty list of dictionaries
+    
     if not isinstance(chart_info['data'], list) or not chart_info['data']:
         logging.error("Chart data is not a non-empty list.")
         return False
@@ -838,19 +808,24 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
         if not isinstance(entry, dict):
             logging.error(f"Data entry is not a dictionary: {entry}")
             return False
-
+    
+    chart_type = chart_info['type'].lower()
+    if chart_type == "pie chart" and len(chart_info['data_series']) != 1:
+        logging.error("Pie chart requires exactly one data series.")
+        return False
+    if chart_type in ["bar chart", "line chart", "scatter plot"] and len(chart_info['data_series']) < 1:
+        logging.error(f"{chart_type.capitalize()} requires at least one data series.")
+        return False
+    
+    for series in chart_info['data_series']:
+        for entry in chart_info['data']:
+            if series not in entry or not isinstance(entry[series], (int, float, str)):
+                logging.error(f"Data series '{series}' has missing or invalid data in entry: {entry}")
+                return False
+    
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    if chart_info.get("type") == "Text Description":
-        ax.text(0.5, 0.5, chart_info.get("description", "No description available"), 
-                wrap=True, horizontalalignment='center', verticalalignment='center')
-        ax.axis('off')
-        plt.title(chart_info.get("title", "Untitled Chart"))
-        return fig, ax
-    
     chart_type = chart_info.get('type', '').lower()
     title = chart_info.get('title', '')
     x_label = chart_info.get('x_label', '')
@@ -859,53 +834,54 @@ def create_chart(chart_info: Dict[str, Any]):
     data = chart_info.get('data', [])
 
     if not data:
-        ax.text(0.5, 0.5, "No data available for chart creation", 
-                wrap=True, horizontalalignment='center', verticalalignment='center')
-        ax.axis('off')
-        plt.title(title)
-        return fig, ax
+        raise ValueError("No data available for chart creation")
 
     df = pd.DataFrame(data)
-    # Convert numeric columns to numbers, if possible
     for col in df.columns:
         if col != x_label and df[col].dtype == object:
             df[col] = pd.to_numeric(df[col].astype(str).str.replace('%', ''), errors='coerce')
 
+    fig, ax = plt.subplots(figsize=(10, 6))
+
     try:
         if 'bar' in chart_type:
-            df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
-            for container in ax.containers:
-                ax.bar_label(container, label_type='edge')
+            if x_label in df.columns:
+                bars = df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
+                for bar in bars.containers:
+                    ax.bar_label(bar, label_type='edge')
+            else:
+                raise ValueError(f"X-axis label '{x_label}' not found in data columns.")
         elif 'line' in chart_type:
-            df.plot(kind='line', x=x_label, y=data_series, ax=ax, marker='o')
-            for line in ax.lines:
-                for x, y in zip(line.get_xdata(), line.get_ydata()):
-                    ax.annotate(f'{y:.2f}', (x, y), xytext=(0, 5), textcoords='offset points', ha='center')
+            if x_label in df.columns:
+                lines = df.plot(kind='line', x=x_label, y=data_series, ax=ax, marker='o')
+                for line in lines.get_lines():
+                    for x, y in zip(line.get_xdata(), line.get_ydata()):
+                        ax.text(x, y, f'{y:.2f}', ha='center', va='bottom')
+            else:
+                raise ValueError(f"X-axis label '{x_label}' not found in data columns.")
         elif 'pie' in chart_type:
             if len(data_series) == 1:
-                df.plot(kind='pie', y=data_series[0], labels=df[x_label], ax=ax, autopct='%1.1f%%')
+                wedges, texts, autotexts = ax.pie(df[data_series[0]], labels=df[x_label], autopct='%1.1f%%', startangle=90)
+                for autotext in autotexts:
+                    autotext.set_color('white')
+                ax.axis('equal')
             else:
                 raise ValueError("Pie chart requires exactly one data series.")
-        elif 'scatter' in chart_type:
-            df.plot(kind='scatter', x=data_series[0], y=data_series[1], ax=ax)
-        elif 'box' in chart_type:
-            df.boxplot(column=data_series, ax=ax)
         else:
             raise ValueError(f"Unsupported chart type: {chart_type}")
 
+        ax.set_title(title, fontsize=14)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
-        ax.set_title(title)
         plt.tight_layout()
+
+        return fig
+
     except Exception as e:
-        logging.error(f"Error creating chart: {str(e)}")
-        ax.text(0.5, 0.5, f"Error creating chart: {str(e)}", 
-                wrap=True, horizontalalignment='center', verticalalignment='center')
-        ax.axis('off')
-
-    return fig, ax
-
-    df = pd.DataFrame(data)
+        plt.close(fig)
+        logging.error(f"Error creating chart '{title}': {str(e)}")
+        raise
+      df = pd.DataFrame(data)
     # Convert numeric columns to numbers, if possible
     for col in df.columns:
         if col != x_label and df[col].dtype == object:
@@ -1416,23 +1392,27 @@ def main():
                             charts = extract_chart_info(result["content"])
                             st.write(f"Number of charts extracted: {len(charts)}")  # Debug info
 
-                            if charts:
-                                st.subheader("Visualizations:")
-                                for i, chart_info in enumerate(charts):
-                                    st.write(f"Processing chart {i+1}:")  # Debug info
-                                    st.json(chart_info)  # Display chart data for debugging
-                                    if validate_chart_data(chart_info):
-                                        try:
-                                            fig, ax = create_chart(chart_info)
-                                            st.pyplot(fig)
-                                            plt.close(fig)  # Close the figure to free up memory
-                                        except Exception as e:
-                                            st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
-                                            logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
-                                    else:
-                                        st.warning(f"Invalid chart data for chart {i+1}. Unable to visualize this chart.")
-                            else:
-                                st.info("No charts were generated for this content.")
+# Extract charts from the 'Visualizations' section
+charts = extract_chart_info(result["content"])
+st.write(f"Number of charts extracted: {len(charts)}")  # Debug info
+
+if charts:
+    st.subheader("Visualizations:")
+    for i, chart_info in enumerate(charts):
+        st.write(f"Processing chart {i+1}:")  # Debug info
+        st.json(chart_info)  # Display chart data for debugging
+        if validate_chart_data(chart_info):
+            try:
+                fig = create_chart(chart_info)
+                st.pyplot(fig)
+                plt.close(fig)  # Close the figure to free up memory
+            except Exception as e:
+                st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
+                logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
+        else:
+            st.warning(f"Invalid chart data for chart {i+1}. Unable to visualize this chart.")
+else:
+    st.info("No charts were generated for this content.")
 
                             # Assess content quality
                             quality_assessment = assess_content_quality(result["content"], publication_type, analysis_type)
