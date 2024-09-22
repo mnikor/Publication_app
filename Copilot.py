@@ -33,6 +33,7 @@ from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
+import networkx as nx  # Add this import at the top of your file
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -818,19 +819,19 @@ def create_chart(chart_info: Dict[str, Any]):
 
     try:
         if chart_type == 'flowchart':
-            # Simple text-based representation of flowchart
-            nodes = chart_info.get('nodes', [])
-            edges = chart_info.get('edges', [])
-            ax.axis('off')
-            y_positions = {node['id']: 1 - (i / (len(nodes) - 1)) for i, node in enumerate(nodes)}
-            for node in nodes:
-                ax.text(0.5, y_positions[node['id']], node['label'], ha='center', va='center', bbox=dict(facecolor='lightblue', edgecolor='black', boxstyle='round'))
-            for edge in edges:
-                start_y = y_positions[edge['from']]
-                end_y = y_positions[edge['to']]
-                ax.annotate('', xy=(0.5, end_y), xytext=(0.5, start_y),
-                            arrowprops=dict(arrowstyle='->'))
+            # Create a simple flowchart using networkx and matplotlib
+            G = nx.DiGraph()
+            for node in chart_info.get('nodes', []):
+                G.add_node(node['id'], label=node['label'])
+            for edge in chart_info.get('edges', []):
+                G.add_edge(edge['from'], edge['to'])
+            
+            pos = nx.spring_layout(G)
+            nx.draw(G, pos, ax=ax, with_labels=False, node_color='lightblue', node_size=3000, arrows=True)
+            nx.draw_networkx_labels(G, pos, {node['id']: node['label'] for node in chart_info['nodes']}, ax=ax)
+
         elif chart_type == 'table':
+            # Create a table using matplotlib
             columns = chart_info.get('columns', [])
             rows = chart_info.get('rows', [])
             cell_text = [[row.get(col, '') for col in columns] for row in rows]
@@ -840,8 +841,23 @@ def create_chart(chart_info: Dict[str, Any]):
             table.auto_set_font_size(False)
             table.set_fontsize(9)
             table.scale(1, 1.5)
+
         else:
-            ax.text(0.5, 0.5, f"Unsupported chart type: {chart_type}", ha='center', va='center')
+            # Handle other chart types
+            data = chart_info.get('data', {})
+            if chart_type == 'bar_chart':
+                x = range(len(data['x']))
+                ax.bar(x, data['y'])
+                ax.set_xticks(x)
+                ax.set_xticklabels(data['x'])
+            elif chart_type == 'line_chart':
+                ax.plot(data['x'], data['y'])
+            elif chart_type == 'scatter_plot':
+                ax.scatter(data['x'], data['y'])
+            elif chart_type == 'pie_chart':
+                ax.pie(data['values'], labels=data['labels'], autopct='%1.1f%%')
+            else:
+                ax.text(0.5, 0.5, f"Unsupported chart type: {chart_type}", ha='center', va='center')
 
         plt.title(title)
         plt.tight_layout()
