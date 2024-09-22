@@ -512,6 +512,59 @@ def extract_tabular_data(text: str) -> str:
     
     return extracted_data if extracted_data else "No tabular data found in the source document."
 
+# Function to get section-specific guidelines
+def get_section_guidelines(section: str, analysis_type: str) -> str:
+    guidelines = {
+        "Title": "Create a concise, informative title that accurately reflects the content of the manuscript. Avoid abbreviations and jargon.",
+        "Authors": "List all authors who contributed significantly to the work. Use full names and affiliations.",
+        "Affiliations": "Provide complete institutional affiliations for all authors, including department, institution, city, and country.",
+        "Abstract": f"Write a structured abstract (250-300 words) summarizing the background, methods, results, and conclusions of the {analysis_type}. Include key numerical results and statistical significance where appropriate.",
+        "Introduction": f"Provide background information relevant to the {analysis_type}. State the rationale for the study, gaps in current knowledge, and specific objectives or hypotheses. Typically 3-5 paragraphs.",
+        "Methods": f"""
+        Describe in detail:
+        - Study design and setting
+        - Participant selection and characteristics
+        - Interventions or exposures (if applicable)
+        - Primary and secondary outcomes
+        - Sample size calculation
+        - Randomization and blinding procedures (if applicable)
+        - Data collection methods
+        - Statistical analysis methods specific to the {analysis_type}
+        Use subheadings as appropriate.
+        """,
+        "Results": f"""
+        Present findings in a logical sequence, using subheadings if needed. Include:
+        - Participant flow and recruitment
+        - Baseline demographic and clinical characteristics
+        - Primary outcome results with effect sizes and precision (e.g., 95% confidence interval)
+        - Secondary outcome results
+        - Adverse events or side effects (if applicable)
+        - Any additional analyses specific to the {analysis_type}
+        Use tables and figures to summarize complex data.
+        """,
+        "Discussion": f"""
+        Interpret your results in the context of existing literature. Include:
+        - Summary of key findings
+        - Comparison with relevant studies
+        - Strengths and limitations of the study
+        - Implications of the findings for clinical practice or future research
+        - Unanswered questions and future directions
+        Typically 4-6 paragraphs.
+        """,
+        "Conclusion": "Provide a brief (1-2 paragraphs) conclusion that summarizes the main findings and their implications. Avoid introducing new information.",
+        "Acknowledgements": "Acknowledge any individuals or organizations that contributed to the work but do not meet authorship criteria. Include funding sources and any potential conflicts of interest.",
+        "References": "List all sources cited in the text using the appropriate citation style (e.g., Vancouver, APA). Ensure all references are current and relevant.",
+        "Tables and Figures": f"""
+        Create clear, self-explanatory tables and figures that complement the text. Include:
+        - Descriptive titles
+        - Clear labels for all axes, columns, and rows
+        - Explanatory footnotes if needed
+        - Appropriate statistical measures (e.g., p-values, confidence intervals)
+        Suggest up to 5 relevant visualizations based on the {analysis_type} data.
+        """
+    }
+    return guidelines.get(section, "Provide relevant content for this section.")
+
 def generate_document(publication_type: str, analysis_type: str, user_input: str, additional_instructions: str) -> Optional[Dict[str, Any]]:
     try:
         pub_type_info = PUBLICATION_TYPES[publication_type]
