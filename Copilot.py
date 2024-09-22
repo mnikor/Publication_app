@@ -691,57 +691,55 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             {additional_instructions}
             """
         elif publication_type == "Manuscript":
-            prompt = f"""
-    You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into comprehensive manuscripts.
+    prompt = f"""
+You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into comprehensive manuscripts.
 
-    **Critical Instructions**:
-    - Provide **extensive and detailed** content for each section, especially the **Methods** and **Statistical Analysis** sections.
-    - Include all relevant details, inferring information based on standard practices if necessary.
-    - Do not limit the length of these sections; ensure they are as detailed as appropriate for a scientific manuscript.
+**Critical Instructions**:
+- Provide **extensive and detailed** content for each section, especially the **Methods** and **Statistical Analysis** sections.
+- Include all relevant details, inferring information based on standard practices if necessary.
+- Do not limit the length of these sections; ensure they are as detailed as appropriate for a scientific manuscript.
 
-    **Publication Type:** {publication_type}
-    **Analysis Type:** {analysis_type}
+**Publication Type:** {publication_type}
+**Analysis Type:** {analysis_type}
 
-    ### **Section Requirements:**
+### **Section Requirements:**
 
-    {section_requirements}
+{section_requirements}
 
-    ### **Guidelines:**
+### **Guidelines:**
 
-    1. **Document Length:**
-       - **Publication:** Maximum {max_length_pub} {length_type_pub}.
-       - **Analysis:** Maximum {max_length_analysis} {length_type_analysis}.
+1. **Document Length:**
+   - **Publication:** Maximum {max_length_pub} {length_type_pub}.
+   - **Analysis:** Maximum {max_length_analysis} {length_type_analysis}.
 
-    2. **Structure:**
-       - Include all sections from both the publication type and analysis type.
-       - Use Markdown syntax for headings (e.g., ## Methods).
+2. **Structure:**
+   - Include all sections from both the publication type and analysis type.
+   - Use Markdown syntax for headings (e.g., ## Methods).
 
-    3. **Content Generation:**
-       - Use clear, precise, and formal academic language.
-       - If specific information is missing, infer plausible details based on standard practices.
+3. **Content Generation:**
+   - Use clear, precise, and formal academic language.
+   - If specific information is missing, infer plausible details based on standard practices.
 
+4. **Important Note**:
+   - The **Methods** section should include detailed information on the study design, participant selection, interventions, data collection procedures, and statistical analyses. Do not omit any critical details.
+   - The **Statistical Analysis** section should thoroughly explain all statistical methods used, including assumptions, software, and handling of data.
 
-            5. **Important Note**:
-               - The **Methods** section should include detailed information on the study design, participant selection, interventions, data collection procedures, and statistical analyses. Do not omit any critical details.
-               - The **Statistical Analysis** section should thoroughly explain all statistical methods used, including assumptions, software, and handling of data."
-    
-            5. **Visualizations:**
-               - Extract key numerical data from the input and suggest up to 2 relevant charts or visualizations.
-               - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
+5. **Visualizations:**
+   - Extract key numerical data from the input and suggest up to 2 relevant charts or visualizations.
+   - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
 
-            ```json
-            {{
-              "type": "Chart Type (e.g., Bar Chart, Line Chart)",
-              "title": "Chart Title",
-              "x_label": "X-axis Label",
-              "y_label": "Y-axis Label",
-              "data_series": ["Numerical Series1", "Numerical Series2", ...],
-              "data": [
-                {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
-                ...
-              ]
-            }}
-            ```
+```json
+{{
+  "type": "Chart Type (e.g., Bar Chart, Line Chart)",
+  "title": "Chart Title",
+  "x_label": "X-axis Label",
+  "y_label": "Y-axis Label",
+  "data_series": ["Numerical Series1", "Numerical Series2", ...],
+  "data": [
+    {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
+    ...
+  ]
+}}
 
             After completing the publication and analysis content, provide a separate section titled "## Visualizations" containing all chart JSON data.
 
