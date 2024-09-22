@@ -580,6 +580,9 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
         font_size_info = ", ".join([f"{k.capitalize()}: {v}pt" for k, v in font_sizes.items()])
 
         structure = pub_type_info["structure"]
+        structure_info = "\n".join([f"- {section}" for section in structure])
+
+        extracted_data = extract_tabular_data(user_input)
 
         if publication_type == "Manuscript":
             full_content = ""
@@ -610,6 +613,8 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
                 {additional_instructions}
 
                 Please generate a concise and focused {section} section for this Manuscript. Do not include the section title in your response. Ensure that it follows scientific writing standards and provides all important details relevant to this section without unnecessary repetition or verbosity.
+
+                If this is the 'Tables and Figures' section, suggest up to 5 relevant visualizations based on the {analysis_type} data. For each visualization, provide the chart information in JSON format as described in the previous instructions.
                 """
 
                 response = client.chat.completions.create(
