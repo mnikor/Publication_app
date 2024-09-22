@@ -348,6 +348,30 @@ def get_section_requirements(publication_type: str) -> str:
            - Disclosures: Include funding sources and any potential conflicts of interest.
            - Review: Mention that the summary has been reviewed by both a medical expert and a patient advocate (if applicable).
         """
+          elif publication_type == "Manuscript":
+        return """
+           - Title: Concise, informative, and reflective of the study's main focus. (Typically 10-15 words)
+           - Authors and Affiliations: Full names and institutional affiliations of all authors.
+           - Abstract: Structured summary of the study (typically 250-300 words), including:
+             • Background
+             • Methods
+             • Results
+             • Conclusions
+           - Introduction: Provide context, state the objective, and outline the hypothesis.
+           - Methods: Detailed description of study design, participants, interventions, and statistical analyses.
+           - Results: Present findings with appropriate statistical analysis and without interpretation.
+           - Discussion: Interpret results in the context of other evidence, address limitations, and state implications.
+           - Conclusion: Summarize main findings and their importance.
+           - Acknowledgements: Recognize contributions of non-authors and funding sources.
+           - References: Cite relevant literature (typically 30-50 references for original research).
+           - Tables and Figures: Include essential visual representations of data (typically 5-7 total).
+           - General guidelines:
+             - Maximum 3,500 words (excluding abstract, references, tables, and figures).
+             - Use clear, concise language appropriate for a scientific audience.
+             - Follow standard scientific writing conventions and journal-specific formatting guidelines.
+             - Define abbreviations at first use.
+             - Use past tense for completed actions and present tense for known facts and conclusions.
+        """
     else:
         return ""
 
