@@ -614,7 +614,15 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
                 # Extract chart information if present
                 if section == "Tables and Figures":
-                    charts = extract_chart_info(section_content)
+                    section_charts = extract_chart_info(section_content)
+                    charts.extend(section_charts)
+            
+            # Add a separate Visualizations section at the end
+            if charts:
+                full_content += "\n\n## Visualizations\n\n"
+                for chart in charts:
+                    full_content += f"### {chart['title']}\n\n"
+                    full_content += f"```json\n{json.dumps(chart, indent=2)}\n```\n\n"
             
             return {"content": full_content, "charts": charts}
         else:
@@ -1140,12 +1148,17 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
         if charts:
             doc.add_heading("Visualizations", level=2)
             for chart in charts:
-                # Create chart using Matplotlib
-                fig = create_chart(chart)
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
-                    fig.savefig(tmpfile.name, format='png', bbox_inches='tight')
-                    doc.add_picture(tmpfile.name, width=Inches(6))
-                os.unlink(tmpfile.name)
+                try:
+                    # Create chart using Matplotlib
+                    fig = create_chart(chart)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+                        fig.savefig(tmpfile.name, format='png', bbox_inches='tight')
+                        doc.add_picture(tmpfile.name, width=Inches(6))
+                    os.unlink(tmpfile.name)
+                    plt.close(fig)  # Close the figure to free up memory
+                except Exception as e:
+                    logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
+                    doc.add_paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}")
         # Save to BytesIO
         file_stream = BytesIO()
         doc.save(file_stream)
@@ -1217,40 +1230,45 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
             elements.append(Paragraph("Visualizations", styles['Heading2']))
             elements.append(Spacer(1, 12))
             for chart in charts:
-                fig = create_chart(chart)
-                img_buffer = BytesIO()
-                fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
-                img_buffer.seek(0)
-                img = Image(img_buffer)
-                
-                # Calculate aspect ratio and adjust image size
-                fig_width, fig_height = fig.get_size_inches()
-                aspect_ratio = fig_height / fig_width
-                
-                img_width = 6 * inch  # Set a maximum width
-                img_height = img_width * aspect_ratio
-                
-                # If the height is too large, adjust both width and height
-                if img_height > 8 * inch:
-                    img_height = 8 * inch
-                    img_width = img_height / aspect_ratio
-                
-                img.drawHeight = img_height
-                img.drawWidth = img_width
-                img.hAlign = 'CENTER'
-                
-                # Add more space before the chart
-                elements.append(Spacer(1, 24))
-                elements.append(img)
-                # Add more space after the chart
-                elements.append(Spacer(1, 24))
-                
-                # Add chart title
-                if 'title' in chart:
-                    elements.append(Paragraph(chart['title'], styles['Heading4']))
-                    elements.append(Spacer(1, 12))
-                
-                plt.close(fig)
+                try:
+                    fig = create_chart(chart)
+                    img_buffer = BytesIO()
+                    fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
+                    img_buffer.seek(0)
+                    img = Image(img_buffer)
+                    
+                    # Calculate aspect ratio and adjust image size
+                    fig_width, fig_height = fig.get_size_inches()
+                    aspect_ratio = fig_height / fig_width
+                    
+                    img_width = 6 * inch  # Set a maximum width
+                    img_height = img_width * aspect_ratio
+                    
+                    # If the height is too large, adjust both width and height
+                    if img_height > 8 * inch:
+                        img_height = 8 * inch
+                        img_width = img_height / aspect_ratio
+                    
+                    img.drawHeight = img_height
+                    img.drawWidth = img_width
+                    img.hAlign = 'CENTER'
+                    
+                    # Add more space before the chart
+                    elements.append(Spacer(1, 24))
+                    elements.append(img)
+                    # Add more space after the chart
+                    elements.append(Spacer(1, 24))
+                    
+                    # Add chart title
+                    if 'title' in chart:
+                        elements.append(Paragraph(chart['title'], styles['Heading4']))
+                        elements.append(Spacer(1, 12))
+                    
+                    plt.close(fig)
+                except Exception as e:
+                    logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
+                    elements.append(Paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}", styles['Justify']))
+                    elements.append(Spacer(1, 6))
 
         doc.build(elements)
         buffer.seek(0)
