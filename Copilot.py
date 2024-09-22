@@ -850,29 +850,42 @@ def create_chart(chart_info: Dict[str, Any]):
     title = chart_info.get('title', 'Untitled Chart')
     description = chart_info.get('description', '')
 
+    logging.info(f"Attempting to create chart: {title}")
+    logging.debug(f"Chart info: {chart_info}")
+
     try:
-        # Handle text descriptions
+        # Handle text descriptions with numeric data
         if chart_type == "text description":
-            # Extract numeric data from the description
+            logging.info("Processing text description chart")
+            # Try to extract numeric data from the description
             extracted_data = extract_numeric_from_description(description)
+            logging.debug(f"Extracted numeric data: {extracted_data}")
             
             if extracted_data is not None:
-                # Create a bar chart as an example (can be adjusted based on your needs)
+                logging.info("Numeric data found in description. Creating chart.")
+                # Create a bar chart as an example (this can be adjusted to other chart types)
                 fig, ax = plt.subplots(figsize=(8, 6))
                 extracted_data.plot(kind='bar', x='Week', y='Patients', ax=ax)
                 ax.set_title(title)
                 plt.tight_layout()
                 return fig
             else:
-                logging.warning(f"No numeric data found for chart '{title}'")
-                return None
+                logging.warning(f"No numeric data found for chart '{title}'. Falling back to text display.")
+                # Fallback: Create a text-based "chart"
+                fig, ax = plt.subplots(figsize=(8, 6))
+                ax.text(0.5, 0.5, description, wrap=True, horizontalalignment='center', verticalalignment='center')
+                ax.axis('off')
+                plt.title(title)
+                return fig
         else:
+            logging.info(f"Processing non-text chart of type: {chart_type}")
             # Existing logic for non-text charts
             if not chart_info.get('data', []):
                 logging.warning(f"No data available to create the chart: {title}")
                 return None
 
             df = pd.DataFrame(chart_info.get('data', []))
+            logging.debug(f"Chart data: {df}")
 
             fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -910,10 +923,12 @@ def create_chart(chart_info: Dict[str, Any]):
             ax.set_title(title)
             plt.tight_layout()
 
+            logging.info(f"Successfully created chart: {title}")
             return fig
 
     except Exception as e:
         logging.error(f"Error creating chart '{title}': {str(e)}")
+        logging.exception("Traceback:")
         return None
 
 def extract_text_from_pdf(file):
@@ -1353,7 +1368,7 @@ def main():
                                     if validate_chart_data(chart_info):
                                         fig = create_chart(chart_info)
                                         if fig is not None:
-                                            st.pyplot(fig)
+                                            st.pyplot(fig)  # Display the chart
                                             plt.close(fig)  # Close the figure to free up memory
                                         else:
                                             st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}'. Please check the chart data.")
