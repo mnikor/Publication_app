@@ -567,139 +567,68 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             prompt = f"""
             # ... [Congress Abstract prompt remains unchanged] ...
             """
-        elif publication_type == "Manuscript":
-            prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
 
-            You are tasked with generating a comprehensive Manuscript that adheres to international standards for journal publications, combining the structure and guidelines of the following:
+    if publication_type == "Manuscript":
+        prompt = f"""
+        You are a professional scientific medical writing assistant. Generate a comprehensive manuscript for a clinical trial, adhering to international reporting standards (e.g., CONSORT). Ensure ALL of the following sections and details are included:
 
-            **Publication Type:** {publication_type}
-            **Analysis Type:** {analysis_type}
+        1. Title: Concise, informative title reflecting the study's main focus.
 
-            ### **Guidelines:**
+        2. Abstract: Structured summary (250-300 words) including:
+           - Background
+           - Methods (design, participants, interventions, main outcomes)
+           - Results (number randomized, primary and key secondary outcomes)
+           - Conclusions
+           - Trial Registration: NCT number
 
-            1. **Structure and Content:**
-               - **Title Page:**
-                 • Title: Concise, informative, and reflective of the study's main focus (10-20 words).
-                 • Authors: Full names, institutional affiliations, and ORCID IDs (if available).
-                 • Corresponding author: Full contact details.
-                 • Running title: Shortened version of the title (50 characters or less).
-                 • Word count: Total word count excluding abstract, references, tables, and figures.
-               - **Abstract:** Structured summary (250-300 words) including:
-                 • Background
-                 • Methods
-                 • Results
-                 • Conclusions
-                 • Keywords: 3-5 MeSH terms
-               - **Introduction:**
-                 • Provide context and rationale for the study
-                 • State the objective and hypothesis clearly
-                 • Briefly outline the approach
-               - **Methods:**
-                 • Study design and setting
-                 • Participants: Inclusion/exclusion criteria, recruitment process
-                 • Variables: Define primary and secondary outcomes
-                 • Data sources/measurement: Describe tools and procedures
-                 • Bias: Address potential sources of bias and how they were mitigated
-                 • Sample size: Justify the sample size or power calculation
-                 • **Statistical Analysis:**
-                   - Describe all statistical tests and software used
-                   - Specify the level of significance (e.g., α = 0.05)
-                   - Explain how missing data were handled
-                   - Describe any sensitivity analyses performed
-                   - For primary outcomes, state that effect sizes and confidence intervals will be reported
-                   - For regression analyses, specify the covariates included and how they were selected
-                   - For repeated measures, describe the approach to handling within-subject correlation
-                   - If applicable, describe methods for adjusting for multiple comparisons
-                 • Ethical considerations: State ethical approval and informed consent process
-               - **Results:**
-                 • Participants: Flow diagram of participant selection (if applicable)
-                 • Descriptive data: Demographic and clinical characteristics of participants
-                 • Main outcomes: 
-                   - Present primary and secondary outcome results
-                   - Include effect sizes and 95% confidence intervals for primary outcomes
-                   - Report actual p-values rather than inequality statements (e.g., p = 0.023 instead of p < 0.05)
-                 • Additional analyses: Subgroup or sensitivity analyses
-               - **Discussion:**
-                 • Key findings: Summarize the main results
-                 • Interpretation: Compare results with existing literature
-                 • Strengths and limitations of the study
-                 • Implications for practice and future research
-               - **Conclusion:** Concise summary of main findings and their importance
-               - **Acknowledgements:** Recognize contributions of non-authors and funding sources
-               - **References:** Cite 30-50 relevant and recent sources, following journal-specific format
-               - **Tables and Figures:** Include 5-7 essential visual representations of data with detailed captions
+        3. Introduction:
+           - Background: Explain the scientific context and rationale
+           - Objectives: State specific objectives and hypotheses
 
-            2. **Document Length:**
-               - Maximum {max_length_pub} {length_type_pub} (excluding abstract, references, tables, and figures).
+        4. Methods:
+           - Trial Design: Description, important changes to methods after trial commencement
+           - Participants: Eligibility criteria, settings, locations of data collection
+           - Interventions: Precise details of interventions in each group, how and when administered
+           - Outcomes: Completely defined pre-specified primary and secondary outcome measures, including how and when assessed
+           - Sample Size: How it was determined
+           - Randomization: 
+             • Sequence generation: Method used to generate the random allocation sequence
+             • Allocation concealment: Method used to implement the random allocation sequence
+             • Implementation: Who generated the allocation sequence, enrolled participants, and assigned them to interventions
+           - Blinding: Who was blinded after assignment to interventions and how
+           - Statistical Methods: 
+             • Statistical methods used to compare groups for primary and secondary outcomes
+             • Methods for additional analyses, such as subgroup analyses and adjusted analyses
+           - Ethical Considerations: Mention of ethical approval, informed consent, and adherence to guidelines
 
-            3. **Writing Style and Formatting:**
-               - Use clear, concise language appropriate for an international scientific audience.
-               - Follow standard scientific writing conventions (e.g., IMRAD structure).
-               - Use past tense for completed actions and present tense for known facts and conclusions.
-               - Define abbreviations at first use.
-               - Use SI units for measurements.
-               - Follow AMA or APA style guide for general formatting.
+        5. Results:
+           - Participant Flow: Flow of participants through each stage (a diagram is strongly recommended)
+           - Recruitment: Dates defining the periods of recruitment and follow-up
+           - Baseline Data: Baseline demographic and clinical characteristics of each group
+           - Numbers Analyzed: Number of participants in each group included in each analysis and whether the analysis was by original assigned groups
+           - Outcomes and Estimation: For each primary and secondary outcome, results for each group, and the estimated effect size and its precision
+           - Ancillary Analyses: Results of any other analyses performed
+           - Harms: All important harms or unintended effects in each group
 
-            4. **Ethical Considerations:**
-               - Include a statement on ethical approval and informed consent.
-               - Disclose any conflicts of interest.
-               - Adhere to ICMJE recommendations for authorship.
-               - Follow CONSORT, STROBE, or other relevant reporting guidelines.
+        6. Discussion:
+           - Limitations: Trial limitations, addressing sources of potential bias, imprecision, and, if relevant, multiplicity of analyses
+           - Generalizability: External validity of the trial findings
+           - Interpretation: Interpretation consistent with results, balancing benefits and harms, and considering other relevant evidence
 
-            5. **Data Presentation:**
-               - Present data accurately and completely.
-               - Use appropriate statistical tests and report p-values accurately.
-               - Include measures of variability (e.g., standard deviations) for numerical data.
-               - Report effect sizes and confidence intervals for primary outcomes.
-               - Consider using supplementary materials for extensive datasets.
+        7. Other Information:
+           - Registration: Registration number and name of trial registry
+           - Protocol: Where the full trial protocol can be accessed, if available
+           - Funding: Sources of funding and other support, role of funders
 
-            6. **Visualizations:**
-               - Create clear, self-explanatory figures and tables.
-               - Provide detailed legends for all figures.
-               - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
+        Ensure that all sections are comprehensive and adhere to the guidelines provided. Use the following input to generate the manuscript:
 
-            ```json
-            {{
-              "type": "Chart Type (e.g., Bar Chart, Line Chart)",
-              "title": "Chart Title",
-              "x_label": "X-axis Label",
-              "y_label": "Y-axis Label",
-              "data_series": ["Numerical Series1", "Numerical Series2", ...],
-              "data": [
-                {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
-                ...
-              ]
-            }}
-            ```
+        Analysis Type: {analysis_type}
+        Input: {user_input}
+        Additional Instructions: {additional_instructions}
 
-            7. **Tables:**
-               - Include up to 5-7 essential tables that complement the text.
-               - For each table:
-                 - Provide a detailed title
-                 - List column headers
-                 - Use actual data from the source document if available. Here's the extracted tabular data:
-                   {extracted_data}
-                 - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
-               - Use Markdown table syntax for creating tables.
+        Generate the complete manuscript, ensuring all required sections and details are included.
+        """
 
-            8. **Acknowledgement:**
-               - Include an Acknowledgement section at the end of the document with the following text:
-                 "This manuscript was created with the assistance of generative AI technology."
-
-            Adherence to Guidelines:
-            Strictly adhere to the format and guidelines for both the Manuscript publication type and the specified analysis type.
-            Ensure that ALL sections specified in the combined structure are present and contain comprehensive, accurate content.
-
-            Combined Structure:
-            {structure_info}
-
-            Input:
-            {user_input}
-
-            Additional Instructions:
-            {additional_instructions}
-            """
         else:
             prompt = f"""
             # ... [General prompt for other publication types remains unchanged] ...
