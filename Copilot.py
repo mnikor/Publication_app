@@ -1,4 +1,5 @@
 
+
 import os
 import re
 import json
@@ -33,7 +34,6 @@ from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
 from reportlab.lib import colors
 from reportlab.platypus import Table, TableStyle
-import networkx as nx  # Add this import at the top of your file
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -326,6 +326,41 @@ def get_section_requirements(publication_type: str) -> str:
              - For commercial names, use the format: generic (Commercial®).
              - Identify complex chemotherapeutic regimens clearly.
         """
+def get_section_requirements(publication_type: str) -> str:
+    if publication_type == "Manuscript":
+        return """
+           - **Title**: Reflect the content and findings of the study concisely.
+           - **Abstract**: Summarize the background, methods, results, and conclusions (250-300 words).
+           - **Introduction**:
+             - Provide background and context for the study.
+             - State the research question or hypothesis.
+             - Review relevant literature.
+           - **Methods**:
+             - Describe the study design (e.g., randomized controlled trial, observational study).
+             - Detail participant selection, inclusion/exclusion criteria.
+             - Explain interventions or exposures.
+             - Outline data collection methods.
+             - Provide a comprehensive description of the statistical analysis plan, including software used and any adjustments for confounding variables.
+           - **Results**:
+             - Present findings in a logical sequence.
+             - Use tables and figures to summarize data.
+             - Report on primary and secondary outcomes.
+           - **Discussion**:
+             - Interpret the results in the context of existing literature.
+             - Discuss the implications of the findings.
+             - Address limitations of the study.
+           - **Conclusion**:
+             - Summarize the main findings.
+             - Suggest recommendations or future research directions.
+           - **Acknowledgements**: Recognize individuals or organizations that contributed but did not meet authorship criteria.
+           - **References**: List all sources cited in the text.
+           - **Tables and Figures**: Include relevant visuals with appropriate captions and legends.
+           - **General Guidelines**:
+             - Ensure clarity, coherence, and logical flow.
+             - Adhere to the target journal's formatting and style guidelines.
+             - Use formal academic language and define all technical terms.
+        """
+    
     elif publication_type == "Plain Language Summary":
         return """
            - Title: Simple, clear, and reflective of the main message. (10-15 words)
@@ -355,6 +390,76 @@ def get_section_requirements(publication_type: str) -> str:
 def calculate_flesch_kincaid_grade(text: str) -> float:
     return textstat.flesch_kincaid_grade(text)
 
+def assess_content_quality(content: str, publication_type: str, analysis_type: str) -> Dict[str, Any]:
+    assessment = {}
+
+    # 1. Readability Scores
+    assessment["readability"] = {
+        "flesch_kincaid_grade": textstat.flesch_kincaid_grade(content),
+        "flesch_reading_ease": textstat.flesch_reading_ease(content),
+        "smog_index": textstat.smog_index(content),
+    }
+
+    # 2. Word Count and Section Balance
+    sections = re.split(r'\n##\s+', content)
+    section_word_counts = {section.split('\n')[0]: len(section.split()) for section in sections if section.strip()}
+    assessment["word_counts"] = section_word_counts
+    total_words = sum(section_word_counts.values())
+    assessment["total_words"] = total_words
+
+    # 3. Character Count (for Congress Abstract)
+    if publication_type == "Congress Abstract":
+        assessment["total_characters"] = len(content)
+
+    # 4. Keyword Density
+    words = re.findall(r'\w+', content.lower())
+    word_freq = Counter(words)
+    total_words = len(words)
+    keyword_density = {word: count/total_words for word, count in word_freq.most_common(10)}
+    assessment["keyword_density"] = keyword_density
+
+    # 5. Citation Check
+    citation_pattern = r'\(\w+\s+et\s+al\.,\s+\d{4}\)|\[\d+\]'
+    citations = re.findall(citation_pattern, content)
+    assessment["citation_count"] = len(citations)
+
+    # 6. AI-powered Content Evaluation
+    openai_api_key = st.secrets['openai']["OPENAI_API_KEY"]
+    
+    # Truncate content to approximately 128000 tokens (assuming 4 characters per token)
+    max_input_chars = 128000 * 4
+    truncated_content = content[:max_input_chars]
+    
+    if publication_type == "Plain Language Summary":
+        prompt = f"""
+        Evaluate the following Plain Language Summary for a {analysis_type}. 
+        Provide a comprehensive assessment of its quality, focusing on:
+        1. Clarity and simplicity of language (aim for 6th to 8th-grade reading level)
+        2. Avoidance of jargon and technical terms
+        3. Logical flow and organization of information
+        4. Relevance to patient audience
+        5. Inclusion of key sections (Background, Purpose, Methods, Results, Implications)
+        6. Use of everyday examples or analogies to explain complex concepts
+        7. Appropriate length (200-750 words)
+
+        Highlight any areas that need improvement and suggest specific enhancements.
+
+        Content:
+        {truncated_content}
+
+        Evaluation:
+        """
+    else:
+        prompt = f"""
+        Evaluate the following {publication_type} content for a {analysis_type}. 
+        Provide a comprehensive assessment of its quality, coherence, and adherence to scientific writing standards.
+        Highlight any areas that need improvement and suggest specific enhancements.
+
+        Content:
+        {truncated_content}
+
+        Evaluation:
+        """
 def assess_content_quality(content: str, publication_type: str, analysis_type: str) -> Dict[str, Any]:
     assessment = {}
     try:
@@ -428,6 +533,10 @@ def assess_content_quality(content: str, publication_type: str, analysis_type: s
         assessment["error"] = str(e)
 
     return assessment
+    
+    assessment["ai_evaluation"] = response.choices[0].message.content
+
+    return assessment
 
 def extract_tabular_data(text: str) -> str:
     """
@@ -443,8 +552,172 @@ def extract_tabular_data(text: str) -> str:
     
     return extracted_data if extracted_data else "No tabular data found in the source document."
 
-# Function to get section-specific guidelines
+def generate_document(publication_type: str, analysis_type: str, user_input: str, additional_instructions: str) -> Optional[Dict[str, Any]]:
+    try:
+        pub_type_info = PUBLICATION_TYPES[publication_type]
+        analysis_type_info = ANALYSIS_TYPES[analysis_type]
+        
+        max_length_pub = pub_type_info.get("max_words", pub_type_info.get("max_characters", ""))
+        length_type_pub = "words" if "max_words" in pub_type_info else "characters"
+        
+        max_length_analysis = analysis_type_info.get("max_words", analysis_type_info.get("max_characters", ""))
+        length_type_analysis = "words" if "max_words" in analysis_type_info else "characters"
+        
+        font_sizes = {**pub_type_info["font_sizes"], **analysis_type_info["font_sizes"]}
+        font_size_info = ", ".join([f"{k.capitalize()}: {v}pt" for k, v in font_sizes.items()])
+
+        structure = list(dict.fromkeys(pub_type_info["structure"] + analysis_type_info["structure"]))
+        structure_info = "\n".join([f"- {section}" for section in structure])
+
+        if publication_type == "Manuscript":
+            full_content = ""
+            charts = []
+
+            for section in structure:
+                max_section_tokens = 1000  # Adjust this value as needed
+                section_prompt = f"""
+                You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
+
+                You are now working on the {section} section of a Manuscript for a {analysis_type}.
+
+                Guidelines for this section:
+                {get_section_guidelines(section, analysis_type)}
+
+                Previous content:
+                {full_content}
+
+                Publication Type: {publication_type}
+                Analysis Type: {analysis_type}
+                Maximum Length: {max_length_pub} {length_type_pub} for publication, {max_length_analysis} {length_type_analysis} for analysis
+                Font Sizes: {font_size_info}
+
+                Input:
+                {user_input}
+
+                Additional Instructions:
+                {additional_instructions}
+
+                Please generate a concise and focused {section} section for this Manuscript. Do not include the section title in your response. Ensure that it follows scientific writing standards and provides all important details relevant to this section without unnecessary repetition or verbosity.
+                """
+
+                response = client.chat.completions.create(
+                    model="gpt-4o-2024-08-06",
+                    messages=[
+                        {"role": "system", "content": "You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types."},
+                        {"role": "user", "content": section_prompt}
+                    ],
+                    max_tokens=max_section_tokens,
+                    temperature=0
+                )
+
+                section_content = response.choices[0].message.content.strip()
+                full_content += f"\n\n## {section}\n\n{section_content}"
+
+                # Extract chart information if present
+                if section == "Tables and Figures":
+                    section_charts = extract_chart_info(section_content)
+                    charts.extend(section_charts)
+            
+            # Add a separate Visualizations section at the end
+            if charts:
+                full_content += "\n\n## Visualizations\n\n"
+                for chart in charts:
+                    full_content += f"### {chart['title']}\n\n"
+                    full_content += f"```json\n{json.dumps(chart, indent=2)}\n```\n\n"
+            
+            return {"content": full_content, "charts": charts}
+        else:
+            prompt = f"""
+            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
+
+            You are tasked with generating a comprehensive document that combines the structure and guidelines of the following:
+
+            **Publication Type:** {publication_type}
+            **Analysis Type:** {analysis_type}
+
+            ### **Guidelines:**
+
+            1. **Document Length:**
+               - **Publication:** Maximum {max_length_pub} {length_type_pub}.
+               - **Analysis:** Maximum {max_length_analysis} {length_type_analysis}.
+
+            2. **Font Sizes:**
+               - {font_size_info}
+
+            3. **Structure:**
+               - The document should include all sections from both the publication type and analysis type. Ensure that each section is clearly marked using Markdown syntax (e.g., ## Title, ### Methods).
+               - Provide detailed and comprehensive content for each section.
+
+            4. **Content Generation:**
+               - Use clear and concise language appropriate for a scientific publication.
+               - If specific information is not provided in the input, use placeholder text or general statements that would be appropriate for the section.
+
+            5. **Visualizations:**
+               - Extract key numerical data from the input and suggest up to 2 relevant charts or visualizations.
+               - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
+
+            ```json
+            {{
+              "type": "Chart Type (e.g., Bar Chart, Line Chart)",
+              "title": "Chart Title",
+              "x_label": "X-axis Label",
+              "y_label": "Y-axis Label",
+              "data_series": ["Numerical Series1", "Numerical Series2", ...],
+              "data": [
+                {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
+                ...
+              ]
+            }}
+            ```
+
+            6. **Tables:**
+               - Include up to 5-7 essential tables that complement the text.
+               - For each table:
+                 - Provide a detailed title
+                 - List column headers
+                 - Use actual data from the source document if available
+                 - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
+               - Use Markdown table syntax for creating tables.
+
+            7. **Acknowledgement:**
+               - ALWAYS include an Acknowledgement section at the end of the document with the following text:
+                 "This [publication type] was created with the assistance of generative AI technology."
+
+            Structure:
+            {structure_info}
+
+            Input:
+            {user_input}
+
+            Additional Instructions:
+            {additional_instructions}
+            """
+
+            response = client.chat.completions.create(
+                model="gpt-4o-2024-08-06",
+                messages=[
+                    {"role": "system", "content": "You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=16000,
+                temperature=0
+            )
+
+            full_content = response.choices[0].message.content
+
+            # Extract chart information
+            charts = extract_chart_info(full_content)
+            
+            return {"content": full_content, "charts": charts}
+
+    except Exception as e:
+        logging.error(f"Error in generate_document: {str(e)}")
+        return {"content": f"An error occurred while generating the document: {str(e)}", "charts": []}
+
 def get_section_guidelines(section: str, analysis_type: str) -> str:
+    """
+    Returns specific guidelines for each section of the Manuscript.
+    """
     guidelines = {
         "Title": "Create a concise, informative title that accurately reflects the content of the manuscript. Avoid abbreviations and jargon.",
         "Authors": "List all authors who contributed significantly to the work. Use full names and affiliations.",
@@ -496,360 +769,152 @@ def get_section_guidelines(section: str, analysis_type: str) -> str:
     }
     return guidelines.get(section, "Provide relevant content for this section.")
 
-def generate_document(publication_type: str, analysis_type: str, user_input: str, additional_instructions: str) -> Optional[Dict[str, Any]]:
-    try:
-        pub_type_info = PUBLICATION_TYPES[publication_type]
-        analysis_type_info = ANALYSIS_TYPES[analysis_type]
-        
-        max_length_pub = pub_type_info.get("max_words", pub_type_info.get("max_characters", ""))
-        length_type_pub = "words" if "max_words" in pub_type_info else "characters"
-        
-        max_length_analysis = analysis_type_info.get("max_words", analysis_type_info.get("max_characters", ""))
-        length_type_analysis = "words" if "max_words" in analysis_type_info else "characters"
-        
-        font_sizes = {**pub_type_info["font_sizes"], **analysis_type_info["font_sizes"]}
-        font_size_info = ", ".join([f"{k.capitalize()}: {v}pt" for k, v in font_sizes.items()])
-
-        structure = pub_type_info["structure"]
-        structure_info = "\n".join([f"- {section}" for section in structure])
-
-        extracted_data = extract_tabular_data(user_input)
-
-        if publication_type == "Manuscript":
-            full_content = ""
-            charts = []
-
-            for section in structure:
-                max_section_tokens = 1000  # Adjust this value as needed
-                section_prompt = f"""
-                You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
-
-                You are now working on the {section} section of a Manuscript for a {analysis_type}.
-
-                Guidelines for this section:
-                {get_section_guidelines(section, analysis_type)}
-
-                Previous content:
-                {full_content}
-
-                Publication Type: {publication_type}
-                Analysis Type: {analysis_type}
-                Maximum Length: {max_length_pub} {length_type_pub} for publication, {max_length_analysis} {length_type_analysis} for analysis
-                Font Sizes: {font_size_info}
-
-                Input:
-                {user_input}
-
-                Additional Instructions:
-                {additional_instructions}
-
-                Please generate a concise and focused {section} section for this Manuscript. Do not include the section title in your response. Ensure that it follows scientific writing standards and provides all important details relevant to this section without unnecessary repetition or verbosity.
-
-                If this is the 'Tables and Figures' section, suggest up to 5 relevant visualizations based on the {analysis_type} data. For each visualization, provide the chart information in JSON format within triple backticks specifying the language as JSON. Use the following exact field names: 'type', 'title', 'x_label', 'y_label', 'data_series', and 'data'. Ensure that within 'data', the X-axis values are under the key 'X-axis Value' and Y-axis values under 'Y-axis Value'. The 'title' field should be a descriptive title for the chart.
-
-                Example:
-
-                ```json
-                {{
-                  "type": "line",
-                  "title": "Change in MADRS Total Score Over Time",
-                  "x_label": "Week",
-                  "y_label": "MADRS Total Score Change",
-                  "data_series": ["Higher-Dose Ziprasidone", "Lower-Dose Ziprasidone", "Placebo"],
-                  "data": [
-                    {{"X-axis Value": 0, "Y-axis Value": [0, 0, 0]}},
-                    {{"X-axis Value": 1, "Y-axis Value": [-5.2, -6.1, -4.3]}},
-                    ...
-                  ]
-                }}
-                """
-                response = client.chat.completions.create(
-                    model="gpt-4o-2024-08-06",
-                    messages=[
-                        {"role": "system", "content": "You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types."},
-                        {"role": "user", "content": section_prompt}
-                    ],
-                    max_tokens=max_section_tokens,
-                    temperature=0
-                )
-
-                section_content = response.choices[0].message.content.strip()
-                full_content += f"\n\n## {section}\n\n{section_content}"
-
-                # Extract chart information if present
-                if section == "Tables and Figures":
-                    section_charts = extract_chart_info(section_content)
-                    charts.extend(section_charts)
-            
-            # Add a separate Visualizations section at the end
-            if charts:
-                full_content += "\n\n## Visualizations\n\n"
-                for chart in charts:
-                    full_content += f"### {chart['title']}\n\n"
-                    full_content += f"```json\n{json.dumps(chart, indent=2)}\n```\n\n"
-            
-            return {"content": full_content, "charts": charts}
-        else:
-            # Existing code for other publication types
-            prompt = f"""
-            You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
-
-            You are tasked with generating a comprehensive document that combines the structure and guidelines of the following:
-
-            **Publication Type:** {publication_type}
-            **Analysis Type:** {analysis_type}
-
-            ### **Guidelines:**
-
-            1. **Document Length:**
-               - **Publication:** Maximum {max_length_pub} {length_type_pub}.
-               - **Analysis:** Maximum {max_length_analysis} {length_type_analysis}.
-
-            2. **Font Sizes:**
-               - {font_size_info}
-
-            3. **Structure:**
-               - The document should include all sections from both the publication type and analysis type. Ensure that each section is clearly marked using Markdown syntax (e.g., ## Title, ### Methods).
-               - Provide detailed and comprehensive content for each section. Aim for at least 2-3 sentences per section, unless otherwise specified.
-
-            4. **Content Generation:**
-               - Use clear and concise language appropriate for a scientific publication.
-               - If specific information is not provided in the input, use placeholder text or general statements that would be appropriate for the section.
-
-            5. **Visualizations:**
-               - Extract key numerical data from the input and suggest up to 2 relevant charts or visualizations.
-               - For each chart, provide the following in JSON format, enclosed within triple backticks and specify the language as JSON:
-
-            ```json
-            {{
-              "type": "Chart Type (e.g., Bar Chart, Line Chart)",
-              "title": "Chart Title",
-              "x_label": "X-axis Label",
-              "y_label": "Y-axis Label",
-              "data_series": ["Numerical Series1", "Numerical Series2", ...],
-              "data": [
-                {{"X-axis Value": ..., "Numerical Series1": ..., "Numerical Series2": ...}},
-                ...
-              ]
-            }}
-            ```
-
-            After completing the publication and analysis content, provide a separate section titled "## Visualizations" containing all chart JSON data.
-
-            6. **Tables:**
-               - Include up to 5-7 essential tables that complement the text.
-               - For each table:
-                 - Provide a detailed title
-                 - List column headers
-                 - Use actual data from the source document if available. Here's the extracted tabular data:
-                   {extracted_data}
-                 - If actual data is not available or incomplete, provide placeholder data or ranges based on the study information
-               - Use Markdown table syntax for creating tables.
-
-            7. **Acknowledgement:**
-               - ALWAYS include an Acknowledgement section at the end of the document with the following text:
-                 "This [publication type] was created with the assistance of generative AI technology."
-
-            Adherence to Guidelines:
-            Strictly adhere to the format and guidelines for both the publication type and analysis type.
-            Ensure that ALL sections specified in the combined structure are present and contain at least minimal content.
-
-            Combined Structure:
-            {structure_info}
-
-            Input:
-            {user_input}
-
-            Additional Instructions:
-            {additional_instructions}
-            """
-
-            response = client.chat.completions.create(
-                model="gpt-4o-2024-08-06",
-                messages=[
-                    {"role": "system", "content": "You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=16000,
-                temperature=0
-            )
-
-            full_content = response.choices[0].message.content
-
-            # Extract chart information
-            charts = extract_chart_info(full_content)
-            
-            logging.debug(f"Extracted charts: {charts}")
-
-            return {"content": full_content, "charts": charts}
-
-    except Exception as e:
-        logging.error(f"Error in generate_document: {str(e)}")
-        return {"content": f"An error occurred while generating the document: {str(e)}", "charts": []}
-
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
     charts = []
-    # Match JSON within code blocks
-    json_blocks = re.findall(r'```json\s*([\s\S]*?)```', content, re.DOTALL)
+    # Look for JSON-formatted chart data
+    json_blocks = re.findall(r'```json\s*([\s\S]*?)```', content, re.DOTALL | re.IGNORECASE)
     
-    # Additionally, match standalone JSON objects (optional enhancement)
-    standalone_json_blocks = re.findall(r'(\{[\s\S]*?\})', content, re.DOTALL)
-    
-    all_json_strs = json_blocks + standalone_json_blocks
-    
-    for json_str in all_json_strs:
+    for json_str in json_blocks:
         try:
-            chart_info = json.loads(json_str)
-            if isinstance(chart_info, dict) and 'type' in chart_info:
+            chart_info = json.loads(json_str.strip())
+            if validate_chart_data(chart_info):
                 charts.append(chart_info)
-        except json.JSONDecodeError as e:
-            logging.error(f"JSON decoding error: {e} in block: {json_str}")
-    
+                logging.info(f"Valid chart data found: {chart_info['title']}")
+            else:
+                logging.warning(f"Invalid chart data: {json_str}")
+        except json.JSONDecodeError:
+            logging.error(f"JSON decoding error in chart: {json_str}")
+
+    # If no JSON data found, look for text descriptions of charts
+    if not charts:
+        chart_descriptions = re.findall(r'(Figure \d+:.*?)(?=Figure \d+:|$)', content, re.DOTALL)
+        for desc in chart_descriptions:
+            lines = desc.strip().split('\n')
+            title = lines[0].strip()
+            description = ' '.join(lines[1:]).strip()
+            charts.append({
+                "type": "Text Description",
+                "title": title,
+                "description": description
+            })
+            logging.info(f"Text description chart found: {title}")
+
+    # If still no charts found, log the entire content for debugging
+    if not charts:
+        logging.warning("No charts found. Content:")
+        logging.warning(content)
+
     return charts
 
 def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
-    # Define acceptable type variations
-    chart_type_mapping = {
-        "bar": "bar_chart",
-        "line": "line_chart",
-        "scatter": "scatter_plot",
-        "pie": "pie_chart",
-        "flowchart": "flowchart",
-        "table": "table"
-        # Add more mappings as needed
-    }
-    
-    # Normalize chart type
-    original_type = chart_info.get('type', '').lower()
-    normalized_type = chart_type_mapping.get(original_type)
-    
-    if not normalized_type:
-        logging.error(f"Unsupported chart type: {original_type}")
+    if not isinstance(chart_info, dict):
+        logging.error(f"Chart info is not a dictionary: {chart_info}")
         return False
-    
-    chart_info['type'] = normalized_type  # Update the type to normalized value
-    
-    required_fields = {"type", "title", "data"}
+
+    required_fields = {"type", "title"}
     if not required_fields.issubset(chart_info.keys()):
         logging.error(f"Chart info missing required fields: {chart_info}")
         return False
-    
-    # For charts other than flowchart and table, expect x_label, y_label, data_series
-    if normalized_type not in ["flowchart", "table"]:
-        additional_fields = {"x_label", "y_label", "data_series"}
-        if not additional_fields.issubset(chart_info.keys()):
-            logging.error(f"Chart info missing additional required fields for {normalized_type}: {chart_info}")
-            return False
-    
-    # Validate data_series is a list of strings (if applicable)
-    if "data_series" in chart_info:
-        if not isinstance(chart_info['data_series'], list) or not all(isinstance(series, str) for series in chart_info['data_series']):
-            logging.error("data_series must be a list of strings.")
-            return False
-    
-    # Validate data is present
-    if not chart_info['data']:
-        logging.error("Chart 'data' field is empty.")
+
+    # For Text Description type, only title and description are required
+    if chart_info['type'] == "Text Description":
+        return "description" in chart_info
+
+    # For other chart types, check for additional required fields
+    additional_fields = {"x_label", "y_label", "data_series", "data"}
+    if not additional_fields.issubset(chart_info.keys()):
+        logging.error(f"Chart info missing additional required fields for non-text charts: {chart_info}")
         return False
-    
-    # Additional checks based on chart type
-    if normalized_type == "pie_chart":
-        if len(chart_info.get('data_series', [])) != 1:
-            logging.error("Pie chart requires exactly one data series.")
+
+    # Validate data_series is a list of strings
+    if not isinstance(chart_info['data_series'], list) or not all(isinstance(series, str) for series in chart_info['data_series']):
+        logging.error("data_series must be a list of strings.")
+        return False
+
+    # Validate data is a non-empty list of dictionaries
+    if not isinstance(chart_info['data'], list) or not chart_info['data']:
+        logging.error("Chart data is not a non-empty list.")
+        return False
+    for entry in chart_info['data']:
+        if not isinstance(entry, dict):
+            logging.error(f"Data entry is not a dictionary: {entry}")
             return False
-    elif normalized_type in ["bar_chart", "line_chart", "scatter_plot"]:
-        if len(chart_info.get('data_series', [])) < 1:
-            logging.error(f"{normalized_type.replace('_chart', '').capitalize()} requires at least one data series.")
-            return False
-    
+
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
-    chart_type = chart_info.get('type', '').lower()
-    title = chart_info.get('title', '')
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
+    """
+    Create a chart if numeric data is available, otherwise skip.
+    """
+    chart_type = chart_info.get('type', 'Text Description').lower()
+    title = chart_info.get('title', 'Untitled Chart')
+    description = chart_info.get('description', '')
+
     try:
-        if chart_type == 'flowchart':
-            # Flowchart creation logic
-            G = nx.DiGraph()
-            for node in chart_info.get('data', {}).get('nodes', []):
-                G.add_node(node['id'], label=node['label'])
-            for link in chart_info.get('data', {}).get('links', []):
-                G.add_edge(link['source'], link['target'])
+        # Handle text descriptions
+        if chart_type == "text description":
+            # Extract numeric data from the description
+            extracted_data = extract_numeric_from_description(description)
             
-            pos = nx.spring_layout(G)
-            nx.draw(G, pos, ax=ax, with_labels=False, node_color='lightblue', node_size=3000, arrows=True)
-            nx.draw_networkx_labels(G, pos, {node['id']: node['label'] for node in chart_info.get('data', {}).get('nodes', [])}, ax=ax)
-        
-        elif chart_type == 'bar_chart':
-            labels = chart_info['data'].get('labels', [])
-            datasets = chart_info['data'].get('datasets', [])
-            data_series = chart_info.get('data_series', [])
-            
-            for dataset in datasets:
-                ax.bar(labels, dataset.get('data', []), label=dataset.get('label', ''), color=dataset.get('backgroundColor', 'blue'))
-            
-            ax.set_xlabel(chart_info.get('x_label', ''))
-            ax.set_ylabel(chart_info.get('y_label', ''))
-            ax.set_title(title)
-            ax.legend()
-        
-        elif chart_type == 'pie_chart':
-            labels = chart_info['data'].get('labels', [])
-            datasets = chart_info['data'].get('datasets', [])
-            if datasets:
-                sizes = datasets[0].get('data', [])
-                ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
-                ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-        
-        elif chart_type == 'line_chart':
-            labels = chart_info['data'].get('labels', [])
-            datasets = chart_info['data'].get('datasets', [])
-            for dataset in datasets:
-                ax.plot(labels, dataset.get('data', []), marker='o', label=dataset.get('label', ''), color=dataset.get('backgroundColor', 'blue'))
-            ax.set_xlabel(chart_info.get('x_label', ''))
-            ax.set_ylabel(chart_info.get('y_label', ''))
-            ax.set_title(title)
-            ax.legend()
-        
-        elif chart_type == 'scatter_plot':
-            # Assuming datasets contain 'x' and 'y' data
-            datasets = chart_info['data'].get('datasets', [])
-            for dataset in datasets:
-                x = dataset.get('data_x', [])
-                y = dataset.get('data_y', [])
-                ax.scatter(x, y, label=dataset.get('label', ''), color=dataset.get('backgroundColor', 'blue'))
-            ax.set_xlabel(chart_info.get('x_label', ''))
-            ax.set_ylabel(chart_info.get('y_label', ''))
-            ax.set_title(title)
-            ax.legend()
-        
-        elif chart_type == 'table':
-            # Table creation logic remains the same
-            columns = chart_info.get('data', {}).get('columns', [])
-            rows = chart_info.get('data', {}).get('rows', [])
-            cell_text = [[row.get(col, '') for col in columns] for row in rows]
-            ax.axis('tight')
-            ax.axis('off')
-            table = ax.table(cellText=cell_text, colLabels=columns, loc='center', cellLoc='center')
-            table.auto_set_font_size(False)
-            table.set_fontsize(9)
-            table.scale(1, 1.5)
-        
+            if extracted_data is not None:
+                # Create a bar chart as an example (can be adjusted based on your needs)
+                fig, ax = plt.subplots(figsize=(8, 6))
+                extracted_data.plot(kind='bar', x='Week', y='Patients', ax=ax)
+                ax.set_title(title)
+                plt.tight_layout()
+                return fig
+            else:
+                logging.warning(f"No numeric data found for chart '{title}'")
+                return None
         else:
-            # Handle unsupported chart types
-            ax.text(0.5, 0.5, f"Unsupported chart type: {chart_type}", ha='center', va='center')
-        
-        plt.title(title)
-        plt.tight_layout()
-        return fig
-    
+            # Existing logic for non-text charts
+            if not chart_info.get('data', []):
+                logging.warning(f"No data available to create the chart: {title}")
+                return None
+
+            df = pd.DataFrame(chart_info.get('data', []))
+
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+            x_label = chart_info.get('x_label', '') or df.columns[0]
+            y_label = chart_info.get('y_label', '') or df.columns[1]
+            data_series = chart_info.get('data_series', []) or df.columns[1:]
+
+            for col in df.columns:
+                if col != x_label and df[col].dtype == object:
+                    df[col] = pd.to_numeric(df[col].astype(str).str.replace('%', ''), errors='coerce')
+
+            if 'bar' in chart_type:
+                df.plot(kind='bar', x=x_label, y=data_series, ax=ax)
+                for container in ax.containers:
+                    ax.bar_label(container, label_type='edge')
+            elif 'line' in chart_type:
+                df.plot(kind='line', x=x_label, y=data_series, ax=ax, marker='o')
+                for line in ax.lines:
+                    for x, y in zip(line.get_xdata(), line.get_ydata()):
+                        ax.annotate(f'{y:.2f}', (x, y), xytext=(0, 5), textcoords='offset points', ha='center')
+            elif 'pie' in chart_type:
+                if len(data_series) == 1:
+                    df.plot(kind='pie', y=data_series[0], labels=df[x_label], ax=ax, autopct='%1.1f%%')
+                else:
+                    raise ValueError("Pie chart requires exactly one data series.")
+            elif 'scatter' in chart_type:
+                df.plot(kind='scatter', x=data_series[0], y=data_series[1], ax=ax)
+            elif 'box' in chart_type:
+                df.boxplot(column=data_series, ax=ax)
+            else:
+                raise ValueError(f"Unsupported chart type: {chart_type}")
+
+            ax.set_xlabel(x_label)
+            ax.set_ylabel(y_label)
+            ax.set_title(title)
+            plt.tight_layout()
+
+            return fig
+
     except Exception as e:
-        plt.close(fig)
-        logging.error(f"Error creating chart: {str(e)}")
-        raise
+        logging.error(f"Error creating chart '{title}': {str(e)}")
+        return None
 
 def extract_text_from_pdf(file):
     pdf_reader = PyPDF2.PdfReader(file)
@@ -1000,12 +1065,27 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
         if charts:
             doc.add_heading("Visualizations", level=2)
             for chart in charts:
-                # Create chart using Matplotlib
-                fig = create_chart(chart)
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
-                    fig.savefig(tmpfile.name, format='png', bbox_inches='tight')
-                    doc.add_picture(tmpfile.name, width=Inches(6))
-                os.unlink(tmpfile.name)
+                try:
+                    # Create chart using Matplotlib
+                    fig = create_chart(chart)
+                    if fig is not None:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+                            fig.savefig(tmpfile.name, format='png', bbox_inches='tight')
+                            doc.add_picture(tmpfile.name, width=Inches(6))
+                        os.unlink(tmpfile.name)
+                        plt.close(fig)  # Close the figure to free up memory
+                        
+                        # Add chart title and description
+                        doc.add_paragraph(chart.get("title", "Untitled Chart"), style='Heading3')
+                        if chart.get("type") == "Text Description":
+                            doc.add_paragraph(chart.get("description", "No description available"))
+                    else:
+                        doc.add_paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}")
+                        doc.add_paragraph(f"Error details: {str(e)}")
+                except Exception as e:
+                    logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
+                    doc.add_paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}")
+                    doc.add_paragraph(f"Error details: {str(e)}")
         # Save to BytesIO
         file_stream = BytesIO()
         doc.save(file_stream)
@@ -1077,40 +1157,53 @@ def generate_word_document(content: str, charts: List[Dict[str, Any]], output_fo
             elements.append(Paragraph("Visualizations", styles['Heading2']))
             elements.append(Spacer(1, 12))
             for chart in charts:
-                fig = create_chart(chart)
-                img_buffer = BytesIO()
-                fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
-                img_buffer.seek(0)
-                img = Image(img_buffer)
-                
-                # Calculate aspect ratio and adjust image size
-                fig_width, fig_height = fig.get_size_inches()
-                aspect_ratio = fig_height / fig_width
-                
-                img_width = 6 * inch  # Set a maximum width
-                img_height = img_width * aspect_ratio
-                
-                # If the height is too large, adjust both width and height
-                if img_height > 8 * inch:
-                    img_height = 8 * inch
-                    img_width = img_height / aspect_ratio
-                
-                img.drawHeight = img_height
-                img.drawWidth = img_width
-                img.hAlign = 'CENTER'
-                
-                # Add more space before the chart
-                elements.append(Spacer(1, 24))
-                elements.append(img)
-                # Add more space after the chart
-                elements.append(Spacer(1, 24))
-                
-                # Add chart title
-                if 'title' in chart:
-                    elements.append(Paragraph(chart['title'], styles['Heading4']))
-                    elements.append(Spacer(1, 12))
-                
-                plt.close(fig)
+                try:
+                    if chart.get('type') == 'Text Description':
+                        elements.append(Paragraph(f"{chart['title']}\n{chart['description']}", styles['Justify']))
+                        elements.append(Spacer(1, 6))
+                    else:
+                        fig = create_chart(chart)
+                        if fig is not None:
+                            img_buffer = BytesIO()
+                            fig.savefig(img_buffer, format='png', bbox_inches='tight', dpi=300)
+                            img_buffer.seek(0)
+                            img = Image(img_buffer)
+                            
+                            # Calculate aspect ratio and adjust image size
+                            fig_width, fig_height = fig.get_size_inches()
+                            aspect_ratio = fig_height / fig_width
+                            
+                            img_width = 6 * inch  # Set a maximum width
+                            img_height = img_width * aspect_ratio
+                            
+                            # If the height is too large, adjust both width and height
+                            if img_height > 8 * inch:
+                                img_height = 8 * inch
+                                img_width = img_height / aspect_ratio
+                            
+                            img.drawHeight = img_height
+                            img.drawWidth = img_width
+                            img.hAlign = 'CENTER'
+                            
+                            # Add more space before the chart
+                            elements.append(Spacer(1, 24))
+                            elements.append(img)
+                            # Add more space after the chart
+                            elements.append(Spacer(1, 24))
+                            
+                            # Add chart title
+                            if 'title' in chart:
+                                elements.append(Paragraph(chart['title'], styles['Heading4']))
+                                elements.append(Spacer(1, 12))
+                            
+                            plt.close(fig)
+                        else:
+                            elements.append(Paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}", styles['Justify']))
+                            elements.append(Spacer(1, 6))
+                except Exception as e:
+                    logging.error(f"Error creating chart '{chart.get('title', 'Untitled')}': {str(e)}")
+                    elements.append(Paragraph(f"Error creating chart: {chart.get('title', 'Untitled')}", styles['Justify']))
+                    elements.append(Spacer(1, 6))
 
         doc.build(elements)
         buffer.seek(0)
@@ -1255,15 +1348,15 @@ def main():
                             if charts:
                                 st.subheader("Visualizations:")
                                 for chart_info in charts:
+                                    st.write("Chart data:")
+                                    st.json(chart_info)  # Display the chart data for debugging
                                     if validate_chart_data(chart_info):
-                                        try:
-                                            fig = create_chart(chart_info)
+                                        fig = create_chart(chart_info)
+                                        if fig is not None:
                                             st.pyplot(fig)
-                                        except Exception as e:
-                                            st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}': {str(e)}. Please check the chart data.")
-                                            logging.error(f"Error creating chart '{chart_info.get('title', 'Untitled')}': {str(e)}")
-                                            st.write("Chart data:")
-                                            st.json(chart_info)
+                                            plt.close(fig)  # Close the figure to free up memory
+                                        else:
+                                            st.warning(f"Could not create chart '{chart_info.get('title', 'Untitled')}'. Please check the chart data.")
                                     else:
                                         st.warning("Received invalid chart data. Unable to visualize this chart.")
                             else:
