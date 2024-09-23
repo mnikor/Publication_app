@@ -750,7 +750,7 @@ def create_chart(chart_info: Dict[str, Any]):
 
     try:
         if chart_type == 'flowchart':
-            # Create a simple flowchart using networkx and matplotlib
+            # Flowchart creation logic remains the same
             G = nx.DiGraph()
             for node in chart_info.get('nodes', []):
                 G.add_node(node['id'], label=node['label'])
@@ -762,7 +762,7 @@ def create_chart(chart_info: Dict[str, Any]):
             nx.draw_networkx_labels(G, pos, {node['id']: node['label'] for node in chart_info['nodes']}, ax=ax)
 
         elif chart_type == 'table':
-            # Create a table using matplotlib
+            # Table creation logic remains the same
             columns = chart_info.get('columns', [])
             rows = chart_info.get('rows', [])
             cell_text = [[row.get(col, '') for col in columns] for row in rows]
@@ -775,18 +775,40 @@ def create_chart(chart_info: Dict[str, Any]):
 
         else:
             # Handle other chart types
-            data = chart_info.get('data', {})
+            data = chart_info.get('data', [])
+            data_series = chart_info.get('data_series', [])
+            
             if chart_type == 'bar_chart':
-                x = range(len(data['x']))
-                ax.bar(x, data['y'])
-                ax.set_xticks(x)
-                ax.set_xticklabels(data['x'])
+                # Assuming the first data_series is the primary one
+                series = data_series[0] if data_series else 'Series1'
+                categories = [entry.get('X-axis Value') for entry in data]
+                values = [entry.get(series) for entry in data]
+                ax.bar(categories, values)
+                ax.set_xlabel(chart_info.get('x_label', ''))
+                ax.set_ylabel(chart_info.get('y_label', ''))
+
             elif chart_type == 'line_chart':
-                ax.plot(data['x'], data['y'])
+                series = data_series[0] if data_series else 'Series1'
+                categories = [entry.get('X-axis Value') for entry in data]
+                values = [entry.get(series) for entry in data]
+                ax.plot(categories, values, marker='o')
+                ax.set_xlabel(chart_info.get('x_label', ''))
+                ax.set_ylabel(chart_info.get('y_label', ''))
+
             elif chart_type == 'scatter_plot':
-                ax.scatter(data['x'], data['y'])
+                # Assuming 'X-axis Value' and 'Y-axis Value' are keys
+                x = [entry.get('X-axis Value') for entry in data]
+                y = [entry.get('Y-axis Value') for entry in data]
+                ax.scatter(x, y)
+                ax.set_xlabel(chart_info.get('x_label', ''))
+                ax.set_ylabel(chart_info.get('y_label', ''))
+
             elif chart_type == 'pie_chart':
-                ax.pie(data['values'], labels=data['labels'], autopct='%1.1f%%')
+                labels = [entry.get('label') for entry in data]
+                sizes = [entry.get('value') for entry in data]
+                ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
+                ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
             else:
                 ax.text(0.5, 0.5, f"Unsupported chart type: {chart_type}", ha='center', va='center')
 
