@@ -1,4 +1,5 @@
 
+
 import os
 import re
 import json
@@ -727,49 +728,89 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
             logging.error("data_series must be a list of strings.")
             return False
     
-    # Validate data is a non-empty list of dictionaries
-    if not isinstance(chart_info['data'], list) or not chart_info['data']:
-        logging.error("Chart data is not a non-empty list.")
+    # Validate data is present
+    if not chart_info['data']:
+        logging.error("Chart 'data' field is empty.")
         return False
-    for entry in chart_info['data']:
-        if not isinstance(entry, dict):
-            logging.error(f"Data entry is not a dictionary: {entry}")
-            return False
     
     # Additional checks based on chart type
-    if normalized_type == "pie_chart" and len(chart_info.get('data_series', [])) != 1:
-        logging.error("Pie chart requires exactly one data series.")
-        return False
-    if normalized_type in ["bar_chart", "line_chart", "scatter_plot"] and len(chart_info.get('data_series', [])) < 1:
-        logging.error(f"{normalized_type.replace('_chart', '').capitalize()} requires at least one data series.")
-        return False
-    # Add more specific validations as needed
+    if normalized_type == "pie_chart":
+        if len(chart_info.get('data_series', [])) != 1:
+            logging.error("Pie chart requires exactly one data series.")
+            return False
+    elif normalized_type in ["bar_chart", "line_chart", "scatter_plot"]:
+        if len(chart_info.get('data_series', [])) < 1:
+            logging.error(f"{normalized_type.replace('_chart', '').capitalize()} requires at least one data series.")
+            return False
     
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
     chart_type = chart_info.get('type', '').lower()
     title = chart_info.get('title', '')
-
+    
     fig, ax = plt.subplots(figsize=(10, 6))
-
+    
     try:
         if chart_type == 'flowchart':
-            # Flowchart creation logic remains the same
+            # Flowchart creation logic
             G = nx.DiGraph()
-            for node in chart_info.get('nodes', []):
+            for node in chart_info.get('data', {}).get('nodes', []):
                 G.add_node(node['id'], label=node['label'])
-            for edge in chart_info.get('edges', []):
-                G.add_edge(edge['from'], edge['to'])
+            for link in chart_info.get('data', {}).get('links', []):
+                G.add_edge(link['source'], link['target'])
             
             pos = nx.spring_layout(G)
             nx.draw(G, pos, ax=ax, with_labels=False, node_color='lightblue', node_size=3000, arrows=True)
-            nx.draw_networkx_labels(G, pos, {node['id']: node['label'] for node in chart_info['nodes']}, ax=ax)
-
+            nx.draw_networkx_labels(G, pos, {node['id']: node['label'] for node in chart_info.get('data', {}).get('nodes', [])}, ax=ax)
+        
+        elif chart_type == 'bar_chart':
+            labels = chart_info['data'].get('labels', [])
+            datasets = chart_info['data'].get('datasets', [])
+            data_series = chart_info.get('data_series', [])
+            
+            for dataset in datasets:
+                ax.bar(labels, dataset.get('data', []), label=dataset.get('label', ''), color=dataset.get('backgroundColor', 'blue'))
+            
+            ax.set_xlabel(chart_info.get('x_label', ''))
+            ax.set_ylabel(chart_info.get('y_label', ''))
+            ax.set_title(title)
+            ax.legend()
+        
+        elif chart_type == 'pie_chart':
+            labels = chart_info['data'].get('labels', [])
+            datasets = chart_info['data'].get('datasets', [])
+            if datasets:
+                sizes = datasets[0].get('data', [])
+                ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
+                ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        
+        elif chart_type == 'line_chart':
+            labels = chart_info['data'].get('labels', [])
+            datasets = chart_info['data'].get('datasets', [])
+            for dataset in datasets:
+                ax.plot(labels, dataset.get('data', []), marker='o', label=dataset.get('label', ''), color=dataset.get('backgroundColor', 'blue'))
+            ax.set_xlabel(chart_info.get('x_label', ''))
+            ax.set_ylabel(chart_info.get('y_label', ''))
+            ax.set_title(title)
+            ax.legend()
+        
+        elif chart_type == 'scatter_plot':
+            # Assuming datasets contain 'x' and 'y' data
+            datasets = chart_info['data'].get('datasets', [])
+            for dataset in datasets:
+                x = dataset.get('data_x', [])
+                y = dataset.get('data_y', [])
+                ax.scatter(x, y, label=dataset.get('label', ''), color=dataset.get('backgroundColor', 'blue'))
+            ax.set_xlabel(chart_info.get('x_label', ''))
+            ax.set_ylabel(chart_info.get('y_label', ''))
+            ax.set_title(title)
+            ax.legend()
+        
         elif chart_type == 'table':
             # Table creation logic remains the same
-            columns = chart_info.get('columns', [])
-            rows = chart_info.get('rows', [])
+            columns = chart_info.get('data', {}).get('columns', [])
+            rows = chart_info.get('data', {}).get('rows', [])
             cell_text = [[row.get(col, '') for col in columns] for row in rows]
             ax.axis('tight')
             ax.axis('off')
@@ -777,50 +818,15 @@ def create_chart(chart_info: Dict[str, Any]):
             table.auto_set_font_size(False)
             table.set_fontsize(9)
             table.scale(1, 1.5)
-
+        
         else:
-            # Handle other chart types
-            data = chart_info.get('data', [])
-            data_series = chart_info.get('data_series', [])
-            
-            if chart_type == 'bar_chart':
-                # Assuming the first data_series is the primary one
-                series = data_series[0] if data_series else 'Series1'
-                categories = [entry.get('X-axis Value') for entry in data]
-                values = [entry.get(series) for entry in data]
-                ax.bar(categories, values)
-                ax.set_xlabel(chart_info.get('x_label', ''))
-                ax.set_ylabel(chart_info.get('y_label', ''))
-
-            elif chart_type == 'line_chart':
-                series = data_series[0] if data_series else 'Series1'
-                categories = [entry.get('X-axis Value') for entry in data]
-                values = [entry.get(series) for entry in data]
-                ax.plot(categories, values, marker='o')
-                ax.set_xlabel(chart_info.get('x_label', ''))
-                ax.set_ylabel(chart_info.get('y_label', ''))
-
-            elif chart_type == 'scatter_plot':
-                # Assuming 'X-axis Value' and 'Y-axis Value' are keys
-                x = [entry.get('X-axis Value') for entry in data]
-                y = [entry.get('Y-axis Value') for entry in data]
-                ax.scatter(x, y)
-                ax.set_xlabel(chart_info.get('x_label', ''))
-                ax.set_ylabel(chart_info.get('y_label', ''))
-
-            elif chart_type == 'pie_chart':
-                labels = [entry.get('label') for entry in data]
-                sizes = [entry.get('value') for entry in data]
-                ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
-                ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-
-            else:
-                ax.text(0.5, 0.5, f"Unsupported chart type: {chart_type}", ha='center', va='center')
-
+            # Handle unsupported chart types
+            ax.text(0.5, 0.5, f"Unsupported chart type: {chart_type}", ha='center', va='center')
+        
         plt.title(title)
         plt.tight_layout()
         return fig
-
+    
     except Exception as e:
         plt.close(fig)
         logging.error(f"Error creating chart: {str(e)}")
