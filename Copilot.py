@@ -357,76 +357,6 @@ def calculate_flesch_kincaid_grade(text: str) -> float:
 
 def assess_content_quality(content: str, publication_type: str, analysis_type: str) -> Dict[str, Any]:
     assessment = {}
-
-    # 1. Readability Scores
-    assessment["readability"] = {
-        "flesch_kincaid_grade": textstat.flesch_kincaid_grade(content),
-        "flesch_reading_ease": textstat.flesch_reading_ease(content),
-        "smog_index": textstat.smog_index(content),
-    }
-
-    # 2. Word Count and Section Balance
-    sections = re.split(r'\n##\s+', content)
-    section_word_counts = {section.split('\n')[0]: len(section.split()) for section in sections if section.strip()}
-    assessment["word_counts"] = section_word_counts
-    total_words = sum(section_word_counts.values())
-    assessment["total_words"] = total_words
-
-    # 3. Character Count (for Congress Abstract)
-    if publication_type == "Congress Abstract":
-        assessment["total_characters"] = len(content)
-
-    # 4. Keyword Density
-    words = re.findall(r'\w+', content.lower())
-    word_freq = Counter(words)
-    total_words = len(words)
-    keyword_density = {word: count/total_words for word, count in word_freq.most_common(10)}
-    assessment["keyword_density"] = keyword_density
-
-    # 5. Citation Check
-    citation_pattern = r'\(\w+\s+et\s+al\.,\s+\d{4}\)|\[\d+\]'
-    citations = re.findall(citation_pattern, content)
-    assessment["citation_count"] = len(citations)
-
-    # 6. AI-powered Content Evaluation
-    openai_api_key = st.secrets['openai']["OPENAI_API_KEY"]
-    
-    # Truncate content to approximately 128000 tokens (assuming 4 characters per token)
-    max_input_chars = 128000 * 4
-    truncated_content = content[:max_input_chars]
-    
-    if publication_type == "Plain Language Summary":
-        prompt = f"""
-        Evaluate the following Plain Language Summary for a {analysis_type}. 
-        Provide a comprehensive assessment of its quality, focusing on:
-        1. Clarity and simplicity of language (aim for 6th to 8th-grade reading level)
-        2. Avoidance of jargon and technical terms
-        3. Logical flow and organization of information
-        4. Relevance to patient audience
-        5. Inclusion of key sections (Background, Purpose, Methods, Results, Implications)
-        6. Use of everyday examples or analogies to explain complex concepts
-        7. Appropriate length (200-750 words)
-
-        Highlight any areas that need improvement and suggest specific enhancements.
-
-        Content:
-        {truncated_content}
-
-        Evaluation:
-        """
-    else:
-        prompt = f"""
-        Evaluate the following {publication_type} content for a {analysis_type}. 
-        Provide a comprehensive assessment of its quality, coherence, and adherence to scientific writing standards.
-        Highlight any areas that need improvement and suggest specific enhancements.
-
-        Content:
-        {truncated_content}
-
-        Evaluation:
-        """
-def assess_content_quality(content: str, publication_type: str, analysis_type: str) -> Dict[str, Any]:
-    assessment = {}
     try:
         # 1. Readability Scores
         assessment["readability"] = {
@@ -744,7 +674,8 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
     charts = []
-    json_blocks = re.findall(r'JSON:\s*(\{[\s\S]*?\})', content, re.DOTALL)
+    # Updated regex pattern to match Markdown code blocks with JSON content
+    json_blocks = re.findall(r'```json\s*([\s\S]*?)```', content, re.DOTALL)
     
     for json_str in json_blocks:
         try:
