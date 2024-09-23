@@ -545,7 +545,7 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
                 Please generate a concise and focused {section} section for this Manuscript. Do not include the section title in your response. Ensure that it follows scientific writing standards and provides all important details relevant to this section without unnecessary repetition or verbosity.
 
-                If this is the 'Tables and Figures' section, suggest up to 5 relevant visualizations based on the {analysis_type} data. For each visualization, provide the chart information in JSON format as described in the previous instructions.
+                If this is the 'Tables and Figures' section, suggest up to 5 relevant visualizations based on the {analysis_type} data. For each visualization, provide the chart information in JSON format with the following exact field names: 'type', 'title', 'x_label', 'y_label', 'data_series', and 'data'. Ensure that within 'data', the X-axis values are under the key 'X-axis Value' and Y-axis values under 'Y-axis Value'. The 'title' field should be a descriptive title for the chart.
                 """
 
                 response = client.chat.completions.create(
@@ -688,15 +688,44 @@ def extract_chart_info(content: str) -> List[Dict[str, Any]]:
     return charts
 
 def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
-    required_fields = {"type", "title", "x_label", "y_label", "data_series", "data"}
+    # Define acceptable type variations
+    chart_type_mapping = {
+        "bar": "bar_chart",
+        "line": "line_chart",
+        "scatter": "scatter_plot",
+        "pie": "pie_chart",
+        "flowchart": "flowchart",
+        "table": "table"
+        # Add more mappings as needed
+    }
+    
+    # Normalize chart type
+    original_type = chart_info.get('type', '').lower()
+    normalized_type = chart_type_mapping.get(original_type)
+    
+    if not normalized_type:
+        logging.error(f"Unsupported chart type: {original_type}")
+        return False
+    
+    chart_info['type'] = normalized_type  # Update the type to normalized value
+    
+    required_fields = {"type", "title", "data"}
     if not required_fields.issubset(chart_info.keys()):
         logging.error(f"Chart info missing required fields: {chart_info}")
         return False
     
-    # Validate data_series is a list of strings
-    if not isinstance(chart_info['data_series'], list) or not all(isinstance(series, str) for series in chart_info['data_series']):
-        logging.error("data_series must be a list of strings.")
-        return False
+    # For charts other than flowchart and table, expect x_label, y_label, data_series
+    if normalized_type not in ["flowchart", "table"]:
+        additional_fields = {"x_label", "y_label", "data_series"}
+        if not additional_fields.issubset(chart_info.keys()):
+            logging.error(f"Chart info missing additional required fields for {normalized_type}: {chart_info}")
+            return False
+    
+    # Validate data_series is a list of strings (if applicable)
+    if "data_series" in chart_info:
+        if not isinstance(chart_info['data_series'], list) or not all(isinstance(series, str) for series in chart_info['data_series']):
+            logging.error("data_series must be a list of strings.")
+            return False
     
     # Validate data is a non-empty list of dictionaries
     if not isinstance(chart_info['data'], list) or not chart_info['data']:
@@ -708,38 +737,14 @@ def validate_chart_data(chart_info: Dict[str, Any]) -> bool:
             return False
     
     # Additional checks based on chart type
-    chart_type = chart_info['type'].lower()
-    if chart_type == "pie chart" and len(chart_info['data_series']) != 1:
+    if normalized_type == "pie_chart" and len(chart_info.get('data_series', [])) != 1:
         logging.error("Pie chart requires exactly one data series.")
         return False
-    if chart_type in ["bar chart", "line chart", "scatter plot", "histogram"] and len(chart_info['data_series']) < 1:
-        logging.error(f"{chart_type.capitalize()} requires at least one data series.")
+    if normalized_type in ["bar_chart", "line_chart", "scatter_plot"] and len(chart_info.get('data_series', [])) < 1:
+        logging.error(f"{normalized_type.replace('_chart', '').capitalize()} requires at least one data series.")
         return False
-    if chart_type == "kaplan-meier curve" and len(chart_info['data_series']) == 2:
-        # For Kaplan-Meier, typically need time and event data
-        pass
-    if chart_type == "forest plot" and len(chart_info['data_series']) >= 3:
-        # Forest plots require effect sizes, confidence intervals, etc.
-        pass
+    # Add more specific validations as needed
     
-    # Check for missing or non-numeric data in data_series
-    for series in chart_info['data_series']:
-        for entry in chart_info['data']:
-            if series not in entry or not isinstance(entry[series], (int, float, str)):
-                logging.error(f"Data series '{series}' has missing or invalid data in entry: {entry}")
-                return False
-    
-    # Additional checks for new chart types
-    if chart_type == "heatmap" and len(chart_info['data_series']) < 3:
-        logging.error("Heatmap requires at least three data series: x, y, and value.")
-        return False
-    if chart_type == "waterfall" and len(chart_info['data_series']) < 2:
-        logging.error("Waterfall chart requires at least two data series: categories and values.")
-        return False
-    if chart_type in ["box plot", "violin plot"] and len(chart_info['data_series']) < 2:
-        logging.error(f"{chart_type.capitalize()} requires at least two data series: categories and values.")
-        return False
-
     return True
 
 def create_chart(chart_info: Dict[str, Any]):
