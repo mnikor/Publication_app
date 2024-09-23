@@ -1,5 +1,4 @@
 
-
 import os
 import re
 import json
@@ -546,9 +545,24 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
                 Please generate a concise and focused {section} section for this Manuscript. Do not include the section title in your response. Ensure that it follows scientific writing standards and provides all important details relevant to this section without unnecessary repetition or verbosity.
 
-                If this is the 'Tables and Figures' section, suggest up to 5 relevant visualizations based on the {analysis_type} data. For each visualization, provide the chart information in JSON format with the following exact field names: 'type', 'title', 'x_label', 'y_label', 'data_series', and 'data'. Ensure that within 'data', the X-axis values are under the key 'X-axis Value' and Y-axis values under 'Y-axis Value'. The 'title' field should be a descriptive title for the chart.
-                """
+                If this is the 'Tables and Figures' section, suggest up to 5 relevant visualizations based on the {analysis_type} data. For each visualization, provide the chart information in JSON format within triple backticks specifying the language as JSON. Use the following exact field names: 'type', 'title', 'x_label', 'y_label', 'data_series', and 'data'. Ensure that within 'data', the X-axis values are under the key 'X-axis Value' and Y-axis values under 'Y-axis Value'. The 'title' field should be a descriptive title for the chart.
 
+                Example:
+
+                ```json
+                {{
+                  "type": "line",
+                  "title": "Change in MADRS Total Score Over Time",
+                  "x_label": "Week",
+                  "y_label": "MADRS Total Score Change",
+                  "data_series": ["Higher-Dose Ziprasidone", "Lower-Dose Ziprasidone", "Placebo"],
+                  "data": [
+                    {{"X-axis Value": 0, "Y-axis Value": [0, 0, 0]}},
+                    {{"X-axis Value": 1, "Y-axis Value": [-5.2, -6.1, -4.3]}},
+                    ...
+                  ]
+                }}
+                """
                 response = client.chat.completions.create(
                     model="gpt-4o-2024-08-06",
                     messages=[
@@ -675,10 +689,15 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
 
 def extract_chart_info(content: str) -> List[Dict[str, Any]]:
     charts = []
-    # Updated regex pattern to match Markdown code blocks with JSON content
+    # Match JSON within code blocks
     json_blocks = re.findall(r'```json\s*([\s\S]*?)```', content, re.DOTALL)
     
-    for json_str in json_blocks:
+    # Additionally, match standalone JSON objects (optional enhancement)
+    standalone_json_blocks = re.findall(r'(\{[\s\S]*?\})', content, re.DOTALL)
+    
+    all_json_strs = json_blocks + standalone_json_blocks
+    
+    for json_str in all_json_strs:
         try:
             chart_info = json.loads(json_str)
             if isinstance(chart_info, dict) and 'type' in chart_info:
