@@ -676,11 +676,11 @@ def generate_document(publication_type: str, analysis_type: str, user_input: str
             Additional Instructions:
             {additional_instructions}
             """
-        elif publication_type == "Manuscript":
+        else:
             prompt = f"""
             You are a professional scientific medical writing assistant specializing in transforming Clinical Study Reports (CSRs) and other source documents into various publication types.
 
-            You are tasked with generating a comprehensive manuscript that combines the structure and guidelines of the following:
+            You are tasked with generating a comprehensive document that combines the structure and guidelines of the following:
 
             **Publication Type:** {publication_type}
             **Analysis Type:** {analysis_type}
